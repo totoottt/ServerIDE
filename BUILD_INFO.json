@@ -1,7 +1,7 @@
 {
-  "version": "0.7.1",
-  "build_number": "12",
-  "release_marker": "PROJECT-PDF-20260829-C",
+  "version": "0.7.3",
+  "build_number": "14",
+  "release_marker": "RESUMABLE-DOWNLOAD-20260830-E",
   "bundle_id": "app.carambola5307.spinach7929",
   "distribution_type": "ad_hoc",
   "deployment_target": "iOS 17.0",

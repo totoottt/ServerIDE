@@ -7,7 +7,7 @@ struct TerminalView: View {
     @StateObject private var selection = TerminalSelectionController()
     @FocusState private var commandFocused: Bool
     @AppStorage("terminalTheme") private var theme = "classic"
-    @AppStorage("terminalFontSize") private var fontSize = 14.0
+    @AppStorage("terminalFontSize") private var fontSize = 18.0
     @AppStorage("terminalWrapLines") private var wrapLines = true
     @State private var transcriptMessage: String?
     @State private var confirmTranscript = false
@@ -46,8 +46,8 @@ struct TerminalView: View {
                 followOutput: followOutput, wrapLines: wrapLines, controller: selection)
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 10) {
-                    control("A−", "textformat.size.smaller") { fontSize = max(10, fontSize - 1) }
-                    control("A+", "textformat.size.larger") { fontSize = min(30, fontSize + 1) }
+                    control("A−", "textformat.size.smaller") { fontSize = max(14, fontSize - 1) }
+                    control("A+", "textformat.size.larger") { fontSize = min(34, fontSize + 1) }
                     control(wrapLines ? "Wrap on" : "Wrap off", "text.alignleft") { wrapLines.toggle() }
                     control("Select freely", "selection.pin.in.out") {
                         commandFocused = false
@@ -75,7 +75,7 @@ struct TerminalView: View {
                 } label: { Image(systemName: "clock.arrow.circlepath") }
                     .accessibilityLabel("Session command history")
                 TextField("Command…", text: $model.command)
-                    .font(.system(.body, design: .monospaced))
+                    .font(.system(size: max(17, fontSize), design: .monospaced))
                     .autocorrectionDisabled().textInputAutocapitalization(.never)
                     .focused($commandFocused).submitLabel(.send)
                     .onSubmit { model.run() }
@@ -88,7 +88,11 @@ struct TerminalView: View {
                 .font(.caption2).foregroundStyle(.secondary).padding(.horizontal).padding(.bottom, 8)
         }
         .navigationTitle(server.name).navigationBarTitleDisplayMode(.inline)
-        .onAppear { model.connect() }
+        .onAppear {
+            // Existing installations may have the older 14pt default saved.
+            if fontSize < 18 { fontSize = 18 }
+            model.connect()
+        }
         .confirmationDialog("Save terminal transcript?", isPresented: $confirmTranscript, titleVisibility: .visible) {
             Button("Save encrypted snapshot") {
                 do {

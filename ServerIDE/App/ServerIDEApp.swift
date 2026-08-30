@@ -3,9 +3,9 @@ import SwiftUI
 @main
 struct ServerIDEApp: App {
     @StateObject private var serverStore = ServerStore()
-    @AppStorage("appTheme") private var storedTheme = "midnight"
+    @AppStorage("appTheme") private var storedTheme = "aurora"
     @State private var filesError: String?
-    private var theme: AppTheme { AppTheme(rawValue: storedTheme) ?? .midnight }
+    private var theme: AppTheme { AppTheme(rawValue: storedTheme) ?? .aurora }
 
     var body: some Scene {
         WindowGroup {
@@ -14,7 +14,10 @@ struct ServerIDEApp: App {
                 .tint(theme.accent)
                 .preferredColorScheme(theme.scheme)
                 .task {
-                    do { try LocalFilesStore.prepare() }
+                    do {
+                        try LocalFilesStore.prepare()
+                        DownloadManager.shared.resumePending()
+                    }
                     catch { filesError = error.localizedDescription }
                 }
                 .alert("Local Files setup failed", isPresented: Binding(

@@ -2,203 +2,97 @@ import SwiftUI
 
 struct DashboardView: View {
     @EnvironmentObject var serverStore: ServerStore
-    @AppStorage("appTheme") private var themeName = AppTheme.emeraldMatrix.rawValue
-    private var theme: AppTheme { AppTheme(rawValue: themeName) ?? .emeraldMatrix }
+    @AppStorage("appTheme") private var themeName = "aurora"
+    private var theme: AppTheme { AppTheme(rawValue: themeName) ?? .aurora }
 
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 22) {
-                
-                // Top Live Glass Badge
+            VStack(alignment: .leading, spacing: 24) {
                 HStack(spacing: 8) {
-                    Circle()
-                        .fill(Color(red: 0.15, green: 0.92, blue: 0.58))
-                        .frame(width: 8, height: 8)
-                        .shadow(color: Color(red: 0.15, green: 0.92, blue: 0.58), radius: 4)
-                    Text("Command Matrix · 0.8.0")
-                        .font(.caption.bold())
+                    Image(systemName: "checkmark.seal.fill")
+                    Text("Project tools · 0.7.1 (12)")
                     Spacer()
-                    Text("2026 CYBER CORE").font(.caption2.monospaced())
+                    Text("29 AUG 2026").font(.caption2.monospaced())
                 }
+                .font(.caption.bold())
                 .foregroundStyle(theme.accent)
-                .padding(.horizontal, 16).padding(.vertical, 10)
-                .background(.ultraThinMaterial, in: Capsule())
-                .overlay(Capsule().stroke(theme.accent.opacity(0.35), lineWidth: 1))
+                .padding(.horizontal, 14).padding(.vertical, 10)
+                .background(theme.accent.opacity(0.12), in: Capsule())
 
-                // Hero Workspace Glass Card
                 VStack(alignment: .leading, spacing: 16) {
                     HStack {
-                        GlassIconPod(icon: "terminal.fill", color: theme.accent, size: 44, iconSize: 20)
-                        
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text("SERVERIDE / STUDIO")
-                                .font(.caption.bold())
-                                .tracking(2)
-                                .foregroundStyle(theme.accent)
-                            Text("PRO ENVIRONMENT")
-                                .font(.caption2.monospaced())
-                                .foregroundStyle(.secondary)
-                        }
+                        Label("SERVERIDE / STUDIO", systemImage: "square.stack.3d.up.fill")
+                            .font(.caption.bold()).tracking(2).foregroundStyle(theme.accent)
                         Spacer()
+                        Image(systemName: "terminal.fill").font(.title)
                     }
-
                     Text("Your infrastructure.\nWithin reach.")
                         .font(.system(.largeTitle, design: .rounded, weight: .bold))
-                        .foregroundStyle(
-                            LinearGradient(
-                                colors: [.white, .white.opacity(0.85)],
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
-                            )
-                        )
-                    
-                    Text("مساحة واحدة متكاملة لإدارة السيرفرات، الملفات، الطرفية والشبكات بتصميم زجاجي فائق.")
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
-
+                    Text("مساحة واحدة للسيرفر، الملفات، الأوامر وأدوات المطوّر.")
+                        .font(.subheadline).foregroundStyle(.secondary)
                     HStack {
-                        HStack(spacing: 6) {
-                            Image(systemName: "server.rack")
-                            Text("\(serverStore.servers.count) profiles active")
-                        }
-                        .font(.caption.bold())
-                        .foregroundStyle(theme.accent)
-                        
+                        Label("\(serverStore.servers.count) profiles", systemImage: "server.rack")
                         Spacer()
-                        
-                        Text("FAST SSH")
-                            .font(.caption2.monospaced().bold())
-                            .padding(.horizontal, 8)
-                            .padding(.vertical, 4)
-                            .background(theme.accent.opacity(0.12), in: RoundedRectangle(cornerRadius: 6))
-                            .foregroundStyle(theme.accent)
-                    }
-                }
-                .studioSurface(glow: theme.accent)
+                        Text("SSH WORKSPACE").font(.caption2.monospaced())
+                    }.font(.caption).foregroundStyle(theme.accent)
+                }.studioSurface()
 
-                // Workspaces Header & Action
                 HStack {
-                    Text("Workspaces")
-                        .font(.title2.bold())
+                    Text("Workspaces").font(.title2.bold())
                     Spacer()
                     NavigationLink { AddServerView() } label: {
-                        HStack(spacing: 6) {
-                            Image(systemName: "plus")
-                            Text("New Server")
-                        }
-                        .font(.subheadline.bold())
-                        .foregroundStyle(.black)
-                        .padding(.horizontal, 14)
-                        .padding(.vertical, 8)
-                        .background(theme.accent, in: Capsule())
-                        .shadow(color: theme.accent.opacity(0.4), radius: 10, x: 0, y: 3)
+                        Label("New", systemImage: "plus").font(.subheadline.bold())
                     }
                 }
-
-                // Servers List (Glassy Cards with Colored Badges)
                 if serverStore.servers.isEmpty {
-                    ContentUnavailableView(
-                        "Connect your first server",
-                        systemImage: "server.rack",
-                        description: Text("Add an SSH profile to unlock live telemetry, scripts and remote terminals.")
-                    )
-                    .studioSurface()
+                    ContentUnavailableView("Connect your first server", systemImage: "server.rack",
+                        description: Text("Add an SSH profile to open files, commands and server metrics."))
+                        .studioSurface()
                 } else {
                     ForEach(serverStore.servers.sorted { ($0.isFavorite == true ? 0 : 1) < ($1.isFavorite == true ? 0 : 1) }) { server in
                         NavigationLink { ServerDetailView(server: server) } label: {
-                            HStack(spacing: 16) {
-                                GlassIconPod(
-                                    icon: "server.rack",
-                                    color: server.isFavorite == true ? Color(red: 1.00, green: 0.85, blue: 0.30) : theme.accent,
-                                    size: 50,
-                                    iconSize: 22
-                                )
-
-                                VStack(alignment: .leading, spacing: 5) {
-                                    HStack {
-                                        Text(server.name)
-                                            .font(.headline)
-                                            .foregroundColor(.white)
-                                        if server.isFavorite == true {
-                                            Image(systemName: "star.fill")
-                                                .font(.caption)
-                                                .foregroundStyle(Color(red: 1.00, green: 0.85, blue: 0.30))
-                                        }
-                                    }
-                                    Text("\(server.username)@\(server.host)")
-                                        .font(.caption.monospaced())
-                                        .foregroundStyle(.secondary)
-                                        .lineLimit(1)
-                                    
-                                    HStack(spacing: 8) {
-                                        Text(server.group.uppercased())
-                                            .font(.caption2.bold())
-                                            .padding(.horizontal, 6)
-                                            .padding(.vertical, 2)
-                                            .background(theme.accent.opacity(0.15), in: RoundedRectangle(cornerRadius: 4))
-                                            .foregroundStyle(theme.accent)
-                                        
-                                        if let lastUsed = server.lastUsed {
-                                            Text(lastUsed.formatted(date: .abbreviated, time: .shortened))
-                                                .font(.caption2)
-                                                .foregroundStyle(.secondary)
-                                        }
+                            HStack(spacing: 14) {
+                                Image(systemName: "server.rack").font(.title2)
+                                    .foregroundStyle(theme.accent)
+                                    .frame(width: 48, height: 48)
+                                    .background(theme.accent.opacity(0.12), in: RoundedRectangle(cornerRadius: 14))
+                                VStack(alignment: .leading, spacing: 6) {
+                                    HStack { Text(server.name).font(.headline); if server.isFavorite == true { Image(systemName: "star.fill").font(.caption) } }
+                                    Text("\(server.username)@\(server.host)").font(.caption.monospaced())
+                                        .foregroundStyle(.secondary).lineLimit(1)
+                                    Text(server.group.uppercased()).font(.caption2.bold()).foregroundStyle(theme.accent)
+                                    if let lastUsed = server.lastUsed {
+                                        Text("Last opened: \(lastUsed.formatted(date: .abbreviated, time: .shortened))").font(.caption2).foregroundStyle(.secondary)
                                     }
                                 }
-
                                 Spacer()
-                                Image(systemName: "chevron.right")
-                                    .font(.subheadline.bold())
-                                    .foregroundStyle(.secondary)
-                            }
-                            .studioSurface(glow: server.isFavorite == true ? Color(red: 1.00, green: 0.85, blue: 0.30) : nil, interactive: true)
-                        }
-                        .buttonStyle(.plain)
-                        .serverActions(server)
+                                Image(systemName: "arrow.up.right").foregroundStyle(theme.accent)
+                            }.studioSurface()
+                        }.buttonStyle(.plain).serverActions(server)
                     }
                 }
-
-                // Quick Launch Hub (Custom Palette Icons)
-                Text("Developer desk")
-                    .font(.title2.bold())
-                
-                LazyVGrid(columns: [GridItem(.adaptive(minimum: 155), spacing: 14)], spacing: 14) {
-                    deskLink("Toolbox", "Local & network tools", "wrench.and.screwdriver", Color(red: 0.20, green: 0.82, blue: 1.00)) { ToolsView() }
-                    deskLink("IP lookup", "Public address details", "network", Color(red: 0.78, green: 0.45, blue: 1.00)) { IPLookupView() }
-                    deskLink("Password lab", "Generate locally", "key.horizontal", Color(red: 1.00, green: 0.65, blue: 0.15)) { PasswordLabView() }
-                    deskLink("Appearance", "Themes & Glass", "paintpalette.fill", Color(red: 1.00, green: 0.35, blue: 0.55)) { SettingsView() }
+                Text("Developer desk").font(.title2.bold())
+                LazyVGrid(columns: [GridItem(.adaptive(minimum: 150), spacing: 12)], spacing: 12) {
+                    deskLink("Toolbox", "Local & network tools", "wrench.and.screwdriver") { ToolsView() }
+                    deskLink("IP lookup", "Public address details", "network") { IPLookupView() }
+                    deskLink("Password lab", "Generate locally", "key.horizontal") { PasswordLabView() }
+                    deskLink("Appearance", "Make it yours", "paintpalette") { SettingsView() }
                 }
-
-                HStack(spacing: 8) {
-                    Image(systemName: "shield.lefthalf.filled")
-                        .foregroundColor(Color(red: 0.15, green: 0.92, blue: 0.58))
-                    Text("Profiles are stored in local sandbox. Keys encrypted with iOS Keychain.")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
-                .padding(.top, 4)
-            }
-            .padding(20)
-            .frame(maxWidth: 960)
-            .frame(maxWidth: .infinity)
-        }
-        .background(StudioBackground())
-        .navigationTitle("Command Center")
-        .navigationBarTitleDisplayMode(.inline)
+                Label("Profiles are saved locally. Passwords use Keychain.", systemImage: "lock")
+                    .font(.caption).foregroundStyle(.secondary)
+            }.padding(20).frame(maxWidth: 960).frame(maxWidth: .infinity)
+        }.background(StudioBackground())
+            .navigationTitle("Command Center").navigationBarTitleDisplayMode(.inline)
     }
 
-    private func deskLink<D: View>(_ title: String, _ subtitle: String, _ icon: String, _ iconColor: Color, @ViewBuilder destination: () -> D) -> some View {
+    private func deskLink<D: View>(_ title: String, _ subtitle: String, _ icon: String,
+                                    @ViewBuilder destination: () -> D) -> some View {
         NavigationLink(destination: destination()) {
-            VStack(alignment: .leading, spacing: 12) {
-                GlassIconPod(icon: icon, color: iconColor, size: 42, iconSize: 18)
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(title).font(.headline).foregroundColor(.white)
-                    Text(subtitle).font(.caption).foregroundStyle(.secondary).lineLimit(1)
-                }
-            }
-            .frame(maxWidth: .infinity, minHeight: 110, alignment: .topLeading)
-            .studioSurface(glow: iconColor, interactive: true)
-        }
-        .buttonStyle(.plain)
+            VStack(alignment: .leading, spacing: 10) {
+                Image(systemName: icon).font(.title2).foregroundStyle(theme.accent)
+                Text(title).font(.headline)
+                Text(subtitle).font(.caption).foregroundStyle(.secondary)
+            }.frame(maxWidth: .infinity, minHeight: 95, alignment: .leading).studioSurface()
+        }.buttonStyle(.plain)
     }
 }

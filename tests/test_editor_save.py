@@ -95,6 +95,10 @@ class EditorSaveTests(unittest.TestCase):
         reply = helper.operate(dict(op="read", path=str(self.target)))
         self.assertEqual(reply["sha256"], self.original_hash)
 
+    @unittest.skipUnless(
+        all(hasattr(os, name) for name in ("setxattr", "getxattr", "listxattr")),
+        "host Python does not expose extended-attribute APIs",
+    )
     def test_save_preserves_extended_attributes(self):
         os.setxattr(self.target, "user.serveride-test", b"keep")
         helper.operate(self.stage(b"draft"))

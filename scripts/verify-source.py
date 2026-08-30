@@ -13,9 +13,9 @@ def require(path: str, text: str) -> None:
         raise SystemExit(f"OLD OR MIXED SOURCE: {path} is missing {text!r}")
 
 
-require("project.yml", "MARKETING_VERSION: 0.7.1")
-require("project.yml", "CURRENT_PROJECT_VERSION: 12")
-require("ServerIDE/Info.plist", "PROJECT-PDF-20260829-C")
+require("project.yml", "MARKETING_VERSION: 0.7.3")
+require("project.yml", "CURRENT_PROJECT_VERSION: 14")
+require("ServerIDE/Info.plist", "RESUMABLE-DOWNLOAD-20260830-E")
 require("ServerIDE/Views/RootView.swift", 'Label("Terminal"')
 require("ServerIDE/Views/Workspace/SFTPView.swift", 'Section("Folders (')
 require("ServerIDE/Views/Workspace/SFTPView.swift", 'Section("Files (')
@@ -29,4 +29,4 @@ require("ServerIDE/Views/Tools/ToolsView.swift", '"Secret Share"')
 if (ROOT / "ServerIDE" / "project.yml").exists():
     raise SystemExit("NESTED PROJECT: upload the package contents, not a ServerIDE wrapper folder")
 
-print("PASS: repository root is ServerIDE 0.7.1 (12) / PROJECT-PDF-20260829-C")
+print("PASS: repository root is ServerIDE 0.7.3 (14) / RESUMABLE-DOWNLOAD-20260830-E")

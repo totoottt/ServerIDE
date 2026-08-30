@@ -12,10 +12,10 @@ def validate(info):
             raise ValueError(f"Built Info.plist is missing boolean {key}=true")
     if info.get("CFBundleIdentifier") != "app.carambola5307.spinach7929":
         raise ValueError("Built Bundle ID does not match BOOS signing profile")
-    if info.get("CFBundleShortVersionString") != "0.7.1" or info.get("CFBundleVersion") != "12":
-        raise ValueError("Built app is not ServerIDE 0.7.1 (12)")
-    if info.get("ServerIDEReleaseMarker") != "PROJECT-PDF-20260829-C":
-        raise ValueError("Built app is missing the PDF fixes release marker")
+    if info.get("CFBundleShortVersionString") != "0.7.3" or info.get("CFBundleVersion") != "14":
+        raise ValueError("Built app is not ServerIDE 0.7.3 (14)")
+    if info.get("ServerIDEReleaseMarker") != "RESUMABLE-DOWNLOAD-20260830-E":
+        raise ValueError("Built app is missing the resumable download release marker")
     primary = info.get("CFBundleIcons", {}).get("CFBundlePrimaryIcon", {})
     if not primary.get("CFBundleIconFiles") and not primary.get("CFBundleIconName"):
         raise ValueError("Built app has no primary app icon")
@@ -34,7 +34,7 @@ def check(path):
         with (path / "Info.plist").open("rb") as f:
             info = plistlib.load(f)
     validate(info)
-    print(f"PASS: {path.name}: ServerIDE 0.7.1 (12), project PDF marker, Files integration, Bundle ID and app icon")
+    print(f"PASS: {path.name}: ServerIDE 0.7.3 (14), resumable downloads, Files integration, Bundle ID and app icon")
 
 
 if __name__ == "__main__":

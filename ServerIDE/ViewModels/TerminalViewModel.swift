@@ -47,8 +47,15 @@ final class TerminalViewModel: ObservableObject {
 
         Task {
             do {
-                if trimmed == "cd" || trimmed.hasPrefix("cd ") {
-                    let changeDirectory = trimmed == "cd" ? "cd ~ && pwd" : "\(trimmed) && pwd"
+                // On a phone, people naturally tap/type an absolute folder path.
+                // Treat a bare path as navigation rather than trying to execute the
+                // directory itself (which causes the misleading "Permission denied").
+                let isBarePath = (trimmed.hasPrefix("/") || trimmed.hasPrefix("~/")) && !trimmed.contains(" ")
+                if trimmed == "cd" || trimmed.hasPrefix("cd ") || isBarePath {
+                    let changeDirectory: String
+                    if trimmed == "cd" { changeDirectory = "cd ~ && pwd" }
+                    else if isBarePath { changeDirectory = "cd \(SSHConnectionManager.shellQuote(trimmed)) && pwd" }
+                    else { changeDirectory = "\(trimmed) && pwd" }
                     let result = try await SSHConnectionManager.shared.executeTerminal(changeDirectory, on: server)
                     if result.exitCode == 0 {
                         let path = result.output.trimmingCharacters(in: .whitespacesAndNewlines)

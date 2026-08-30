@@ -123,7 +123,7 @@ struct RemoteCodeEditorView: View {
         let backup = try await RemoteFileBridge.saveText(snapshot, destination: file.path, expectedSHA256: originalHash, server: server)
         originalText = snapshot
         originalHash = SHA256.hash(data: Data(snapshot.utf8)).map { String(format: "%02x", $0) }.joined()
-        output = "Saved successfully. Original backup: \(backup)"
+        output = "Saved successfully. Backup: \(backup)"
     }
 
     private func runRemoteFile() {
@@ -155,7 +155,14 @@ struct RemoteCodeEditorView: View {
                 }
 
                 output = "$ \(command)\n"
-                output += try await SSHConnectionManager.shared.execute(command, on: server)
+                // A script returning exit code 1 is useful program output, not an
+                // editor failure. Preserve stderr and report the exit code instead
+                // of showing Citadel's generic CommandFailed alert.
+                let result = try await SSHConnectionManager.shared.executeTerminal(command, on: server)
+                output += result.output
+                if result.exitCode != 0 {
+                    output += "\n\nProcess finished with exit code \(result.exitCode)."
+                }
             } catch {
                 output += "\nError: \(error.localizedDescription)"
                 errorMessage = error.localizedDescription

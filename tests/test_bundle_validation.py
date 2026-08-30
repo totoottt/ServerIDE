@@ -15,8 +15,8 @@ class BundleTests(unittest.TestCase):
     def setUp(self):
         self.info = {"UIFileSharingEnabled": True, "LSSupportsOpeningDocumentsInPlace": True,
                      "CFBundleIdentifier": "app.carambola5307.spinach7929",
-                     "CFBundleShortVersionString": "0.7.1", "CFBundleVersion": "12",
-                     "ServerIDEReleaseMarker": "PROJECT-PDF-20260829-C",
+                     "CFBundleShortVersionString": "0.7.3", "CFBundleVersion": "14",
+                     "ServerIDEReleaseMarker": "RESUMABLE-DOWNLOAD-20260830-E",
                      "CFBundleIcons": {"CFBundlePrimaryIcon": {"CFBundleIconName": "AppIcon"}}}
 
     def test_flags_are_required_booleans(self):
@@ -32,8 +32,8 @@ class BundleTests(unittest.TestCase):
                 validator.validate(dict(self.info, **{key: value}))
 
     def test_exact_release_is_required(self):
-        for key, value in (("CFBundleShortVersionString", "0.7.0"),
-                           ("CFBundleVersion", "11"),
+        for key, value in (("CFBundleShortVersionString", "0.7.2"),
+                           ("CFBundleVersion", "13"),
                            ("ServerIDEReleaseMarker", "OLD")):
             with self.assertRaises(ValueError):
                 validator.validate(dict(self.info, **{key: value}))

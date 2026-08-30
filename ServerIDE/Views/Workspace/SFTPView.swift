@@ -5,6 +5,7 @@ import UIKit
 struct SFTPView: View {
     let server: ServerProfile
     @StateObject private var model: SFTPViewModel
+    @ObservedObject private var downloadManager = DownloadManager.shared
     @AppStorage("fileFontSize") private var fontSize = 15.0
     @AppStorage("fileWrapNames") private var wrapNames = true
     @AppStorage("showHiddenFiles") private var showHidden = true
@@ -46,6 +47,18 @@ struct SFTPView: View {
             if !model.status.isEmpty {
                 Section { Text(model.status).font(.caption).foregroundStyle(.secondary) }
             }
+            if let job = downloadManager.jobs.first(where: { $0.server.id == server.id && $0.state != .completed }) {
+                Section("Download in progress") {
+                    NavigationLink { DownloadsView() } label: {
+                        VStack(alignment: .leading, spacing: 6) {
+                            HStack { Image(systemName: "arrow.down.circle.fill"); Text(job.remoteName).lineLimit(1) }
+                            ProgressView(value: job.progress)
+                            Text("\(Int(job.progress * 100))% · \(ByteCountFormatter.string(fromByteCount: Int64(job.receivedBytes), countStyle: .file)) / \(ByteCountFormatter.string(fromByteCount: Int64(job.expectedBytes), countStyle: .file))")
+                                .font(.caption.monospacedDigit()).foregroundStyle(.secondary)
+                        }
+                    }
+                }
+            }
             Section("Folders (\(visible.filter { $0.isDirectory }.count))") {
                 fileEntries(visible.filter { $0.isDirectory })
             }
@@ -76,7 +89,10 @@ struct SFTPView: View {
             } label: { Image(systemName: "ellipsis.circle").font(.title3) }.disabled(model.isLoading)
         }
         .overlay { if model.isLoading { ProgressView("Working…").padding().background(.regularMaterial, in: Capsule()) } }
-        .onAppear { if model.files.isEmpty { model.load() } }
+        .onAppear {
+            DownloadManager.shared.resumePending()
+            if model.files.isEmpty { model.load() }
+        }
         .fileImporter(isPresented: $importer, allowedContentTypes: uploadFolder ? [.folder] : [.data], allowsMultipleSelection: false) { result in
             switch result {
             case .success(let urls): if let url = urls.first { model.upload(url, directory: uploadFolder) }
@@ -121,7 +137,10 @@ struct SFTPView: View {
                 Button("Rename", systemImage: "pencil") { renaming = file; input = file.name; prompt = "Rename" }
                 Button("Copy path", systemImage: "doc.on.doc") { UIPasteboard.general.string = file.path }
                 if !file.isDirectory {
-                    Button("Download to Files", systemImage: "arrow.down.doc") { model.download(file) }
+                    Button("Download to Files", systemImage: "arrow.down.doc") {
+                        DownloadManager.shared.enqueue(file, server: server)
+                        model.status = "Download started. Open Downloads to see progress."
+                    }
                 }
                 Button("Delete", systemImage: "trash", role: .destructive) { deleting = file }
             }

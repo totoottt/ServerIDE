@@ -117,6 +117,19 @@ class RemoteFileTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             self.operation("read", target)
 
+    def test_read_range_supports_resume_and_rejects_invalid_ranges(self):
+        target = self.root / "resume.bin"
+        data = bytes(range(256)) * 2048
+        target.write_bytes(data)
+        first = self.operation("readRange", target, offset=0, count=384 * 1024)
+        second = self.operation("readRange", target, offset=len(base64.b64decode(first["data"])), count=384 * 1024)
+        self.assertEqual(first["size"], len(data))
+        self.assertEqual(base64.b64decode(first["data"]) + base64.b64decode(second["data"]), data[:len(data)])
+        with self.assertRaises(ValueError):
+            self.operation("readRange", target, offset=-1, count=1)
+        with self.assertRaises(ValueError):
+            self.operation("readRange", target, offset=0, count=512 * 1024 + 1)
+
     def test_staging_symlink_cannot_be_written(self):
         target = self.root / "target"
         target.write_text("original")

@@ -13,7 +13,7 @@ class SourceValidationTests(unittest.TestCase):
             capture_output=True,
         )
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
-        self.assertIn("PROJECT-PDF-20260829-C", result.stdout)
+        self.assertIn("RESUMABLE-DOWNLOAD-20260830-E", result.stdout)
 
 
 if __name__ == "__main__":

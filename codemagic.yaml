@@ -1,6 +1,6 @@
 workflows:
   ios-compile-check:
-    name: ServerIDE 0.7.1 Build 12 Compile Check
+    name: ServerIDE 0.7.3 Build 14 Compile Check
     max_build_duration: 60
     instance_type: mac_mini_m2
     environment:
@@ -13,7 +13,7 @@ workflows:
       - name: Test bundle verifier
         script: |
           cd "$CM_BUILD_DIR"
-          python3 -m unittest discover -s tests -p test_bundle_validation.py -v
+          python3 -m unittest discover -s tests -v
       - name: Install XcodeGen
         script: |
           if ! command -v xcodegen >/dev/null 2>&1; then
@@ -48,7 +48,7 @@ workflows:
       - /tmp/xcodebuild_logs/*.log
 
   ios-signed-ipa:
-    name: ServerIDE 0.7.1 Build 12 Ad Hoc IPA
+    name: ServerIDE 0.7.3 Build 14 Ad Hoc IPA
     max_build_duration: 60
     instance_type: mac_mini_m2
     environment:
@@ -64,7 +64,7 @@ workflows:
       - name: Test bundle verifier
         script: |
           cd "$CM_BUILD_DIR"
-          python3 -m unittest discover -s tests -p test_bundle_validation.py -v
+          python3 -m unittest discover -s tests -v
       - name: Install XcodeGen
         script: |
           if ! command -v xcodegen >/dev/null 2>&1; then
