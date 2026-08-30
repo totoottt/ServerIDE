@@ -79,7 +79,7 @@ export default function HomeScreen() {
               ))}
               <View style={styles.sheetActions}>
                 <Pressable onPress={() => setShowServerSheet(false)} style={({ pressed }) => [styles.sheetCancel, { borderColor: colors.border, opacity: pressed ? 0.7 : 1 }]}><Text style={{ color: colors.muted, fontWeight: "800" }}>Cancel</Text></Pressable>
-                <Pressable onPress={() => { void addServer({ name: draft.name || "My server", host: draft.host || "server.example.com", port: Number(draft.port) || 22, username: draft.username || "deploy", authMethod: "ssh-key", color: "blue", group: "Personal", favorite: false, notes: "" }); setOnline(false); setShowServerSheet(false); action(`${draft.name || "Server"} saved locally`); }} style={({ pressed }) => [styles.sheetSave, { backgroundColor: colors.primary, opacity: pressed ? 0.8 : 1 }]}><Text style={styles.sheetSaveText}>Save server</Text></Pressable>
+                <Pressable onPress={() => { void addServer({ name: draft.name || "My server", host: draft.host || "server.example.com", port: Number(draft.port) || 22, username: draft.username || "deploy", authMethod: "ssh-key", color: "blue", group: "Personal", favorite: false, notes: "", roles: ["ssh", "sftp"], tags: [], portKnockSequence: "", forceKeyboardInteractive: false, jumpHost: null, terminalFontSize: 12 }); setOnline(false); setShowServerSheet(false); action(`${draft.name || "Server"} saved locally`); }} style={({ pressed }) => [styles.sheetSave, { backgroundColor: colors.primary, opacity: pressed ? 0.8 : 1 }]}><Text style={styles.sheetSaveText}>Save server</Text></Pressable>
               </View>
             </View>
           </View>

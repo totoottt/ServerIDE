@@ -1,7 +1,15 @@
 import { Platform } from "react-native";
 import * as SecureStore from "expo-secure-store";
 
-export type ServerSecret = { password?: string; privateKey?: string; passphrase?: string; hostFingerprint?: string };
+export type ServerSecret = {
+  password?: string;
+  privateKey?: string;
+  passphrase?: string;
+  hostFingerprint?: string;
+  jumpHostPassword?: string;
+  jumpHostPrivateKey?: string;
+  jumpHostPassphrase?: string;
+};
 
 const keyFor = (serverId: string) => `server-ide.secret.${serverId}`;
 

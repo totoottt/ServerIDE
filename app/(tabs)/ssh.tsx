@@ -23,6 +23,10 @@ export default function SSHScreen() {
   const [privateKey, setPrivateKey] = useState("");
   const [passphrase, setPassphrase] = useState("");
   const [fingerprint, setFingerprint] = useState("");
+  const [otpCode, setOtpCode] = useState("");
+  const [jumpPassword, setJumpPassword] = useState("");
+  const [jumpPrivateKey, setJumpPrivateKey] = useState("");
+  const [jumpPassphrase, setJumpPassphrase] = useState("");
   const [command, setCommand] = useState("");
   const [lines, setLines] = useState<string[]>(["# Server IDE live terminal", "# Select a server and open a session."]);
   const [connected, setConnected] = useState(false);
@@ -33,7 +37,7 @@ export default function SSHScreen() {
     if (!activeServer) return;
     if (!password && !privateKey) { setNotice("Add a password or private key first, then verify"); return; }
     hostKeyMutation.mutate(
-      { credentials: { host: activeServer.host, port: activeServer.port, username: activeServer.username, ...(activeServer.authMethod === "ssh-key" ? { privateKey } : { password }) } },
+      { credentials: { host: activeServer.host, port: activeServer.port, username: activeServer.username, ...(activeServer.authMethod === "ssh-key" ? { privateKey } : { password }), ...(activeServer.portKnockSequence ? { portKnockSequence: activeServer.portKnockSequence } : {}), ...(activeServer.jumpHost?.enabled ? { jumpHost: { host: activeServer.jumpHost.host, port: activeServer.jumpHost.port, username: activeServer.jumpHost.username, ...(jumpPrivateKey ? { privateKey: jumpPrivateKey, passphrase: jumpPassphrase || undefined } : { password: jumpPassword }) } } : {}) } },
       {
         onSuccess: ({ fingerprint: discovered }) => {
           Alert.alert(
@@ -57,7 +61,14 @@ export default function SSHScreen() {
     ...(activeServer.authMethod === "ssh-key" ? { privateKey } : { password }),
     ...(passphrase ? { passphrase } : {}),
     ...(fingerprint ? { hostFingerprint: fingerprint } : {}),
-  } : null, [activeServer, password, privateKey, passphrase, fingerprint]);
+    ...(activeServer.portKnockSequence ? { portKnockSequence: activeServer.portKnockSequence } : {}),
+    ...(activeServer.forceKeyboardInteractive ? { forceKeyboardInteractive: true, otpCode } : {}),
+    ...(activeServer.jumpHost?.enabled ? { jumpHost: {
+      host: activeServer.jumpHost.host, port: activeServer.jumpHost.port, username: activeServer.jumpHost.username,
+      ...(activeServer.jumpHost.portKnockSequence ? { portKnockSequence: activeServer.jumpHost.portKnockSequence } : {}),
+      ...(jumpPrivateKey ? { privateKey: jumpPrivateKey, passphrase: jumpPassphrase || undefined } : { password: jumpPassword }),
+    } } : {}),
+  } : null, [activeServer, password, privateKey, passphrase, fingerprint, otpCode, jumpPassword, jumpPrivateKey, jumpPassphrase]);
 
   useEffect(() => () => { socketRef.current?.close(); }, []);
   useEffect(() => {
@@ -69,6 +80,9 @@ export default function SSHScreen() {
         setPrivateKey(secret.privateKey ?? "");
         setPassphrase(secret.passphrase ?? "");
         setFingerprint(secret.hostFingerprint ?? "");
+        setJumpPassword(secret.jumpHostPassword ?? "");
+        setJumpPrivateKey(secret.jumpHostPrivateKey ?? "");
+        setJumpPassphrase(secret.jumpHostPassphrase ?? "");
       }
     });
     return () => { cancelled = true; };
@@ -172,7 +186,7 @@ export default function SSHScreen() {
         <Pressable onPress={() => setExpandedAuth((value) => !value)} style={({ pressed }) => [styles.credentialButton, { borderColor: colors.border, opacity: pressed ? 0.7 : 1 }]}><Text style={{ color: colors.primary, fontSize: 10, fontWeight: "800" }}>AUTH</Text></Pressable>
       </View>
       <View style={styles.stageRow}>{stages.map((stage, index) => <View key={stage} style={styles.stageMini}><View style={[styles.stageIcon, { backgroundColor: index < completedStages ? colors.success : colors.surface, borderColor: index < completedStages ? colors.success : colors.border }]}><Text style={{ color: index < completedStages ? colors.background : colors.muted, fontSize: 9, fontWeight: "900" }}>{index < completedStages ? "✓" : index + 1}</Text></View><Text style={[styles.stageLabel, { color: index < completedStages ? colors.success : colors.muted }]}>{stage}</Text></View>)}</View>
-      {expandedAuth && <View style={[styles.authBox, { borderColor: colors.border, backgroundColor: colors.surface }]}><TextInput value={activeServer?.authMethod === "ssh-key" ? privateKey : password} onChangeText={activeServer?.authMethod === "ssh-key" ? setPrivateKey : setPassword} secureTextEntry={activeServer?.authMethod !== "ssh-key"} multiline={activeServer?.authMethod === "ssh-key"} placeholder={activeServer?.authMethod === "ssh-key" ? "Private key" : "Password"} placeholderTextColor={colors.muted} style={[styles.input, { color: colors.foreground, borderColor: colors.border }]} /><TextInput value={fingerprint} onChangeText={setFingerprint} placeholder="Host fingerprint: SHA256:…" placeholderTextColor={colors.muted} autoCapitalize="none" style={[styles.input, { color: colors.foreground, borderColor: colors.border }]} />{!fingerprint && <Pressable onPress={verifyHost} disabled={hostKeyMutation.isPending} style={({ pressed }) => [styles.verifyButton, { borderColor: colors.primary, opacity: hostKeyMutation.isPending ? 0.5 : pressed ? 0.7 : 1 }]}><Text style={{ color: colors.primary, fontSize: 11, fontWeight: "800" }}>{hostKeyMutation.isPending ? "CONTACTING HOST…" : "VERIFY HOST & FETCH FINGERPRINT"}</Text></Pressable>}<Text style={[styles.sub, { color: colors.muted }]}>Credentials are encrypted on the device and never echoed in terminal output.</Text></View>}
+      {expandedAuth && <View style={[styles.authBox, { borderColor: colors.border, backgroundColor: colors.surface }]}><TextInput value={activeServer?.authMethod === "ssh-key" ? privateKey : password} onChangeText={activeServer?.authMethod === "ssh-key" ? setPrivateKey : setPassword} secureTextEntry={activeServer?.authMethod !== "ssh-key"} multiline={activeServer?.authMethod === "ssh-key"} placeholder={activeServer?.authMethod === "ssh-key" ? "Private key" : "Password"} placeholderTextColor={colors.muted} style={[styles.input, { color: colors.foreground, borderColor: colors.border }]} /><TextInput value={fingerprint} onChangeText={setFingerprint} placeholder="Host fingerprint: SHA256:…" placeholderTextColor={colors.muted} autoCapitalize="none" style={[styles.input, { color: colors.foreground, borderColor: colors.border }]} />{!fingerprint && <Pressable onPress={verifyHost} disabled={hostKeyMutation.isPending} style={({ pressed }) => [styles.verifyButton, { borderColor: colors.primary, opacity: hostKeyMutation.isPending ? 0.5 : pressed ? 0.7 : 1 }]}><Text style={{ color: colors.primary, fontSize: 11, fontWeight: "800" }}>{hostKeyMutation.isPending ? "CONTACTING HOST…" : "VERIFY HOST & FETCH FINGERPRINT"}</Text></Pressable>}{activeServer?.forceKeyboardInteractive && <TextInput value={otpCode} onChangeText={setOtpCode} placeholder="2FA / OTP code" placeholderTextColor={colors.muted} keyboardType="number-pad" style={[styles.input, { color: colors.foreground, borderColor: colors.border }]} />}{activeServer?.jumpHost?.enabled && <TextInput value={activeServer.authMethod === "ssh-key" ? jumpPrivateKey : jumpPassword} onChangeText={activeServer.authMethod === "ssh-key" ? setJumpPrivateKey : setJumpPassword} secureTextEntry={activeServer.authMethod !== "ssh-key"} multiline={activeServer.authMethod === "ssh-key"} placeholder={`Jump host (${activeServer.jumpHost.host}) ${activeServer.authMethod === "ssh-key" ? "private key" : "password"}`} placeholderTextColor={colors.muted} style={[styles.input, { color: colors.foreground, borderColor: colors.border }]} />}<Text style={[styles.sub, { color: colors.muted }]}>Credentials are encrypted on the device and never echoed in terminal output.</Text></View>}
 
       <View style={[styles.terminal, { backgroundColor: "#0B0F13", borderColor: colors.border }]}>
         <View style={styles.terminalBar}><Text style={{ color: colors.success, fontSize: 11, fontWeight: "800" }}>{activeServer?.name ?? "server"} / bash</Text><Text style={{ color: colors.muted, fontSize: 10 }}>{connected ? "STREAMING" : "OFFLINE"}</Text></View>

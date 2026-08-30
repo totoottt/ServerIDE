@@ -3,6 +3,15 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useState } 
 
 export type ServerAuthMethod = "ssh-key" | "password" | "agent";
 export type ServerColor = "blue" | "purple" | "green" | "orange" | "red";
+export type ServerRole = "ssh" | "sftp";
+
+export type JumpHostProfile = {
+  enabled: boolean;
+  host: string;
+  port: number;
+  username: string;
+  portKnockSequence?: string;
+};
 
 export type ServerProfile = {
   id: string;
@@ -16,7 +25,24 @@ export type ServerProfile = {
   favorite: boolean;
   notes: string;
   createdAt: string;
+  roles: ServerRole[];
+  tags: string[];
+  portKnockSequence: string;
+  forceKeyboardInteractive: boolean;
+  jumpHost: JumpHostProfile | null;
+  terminalFontSize: number;
 };
+
+const DEFAULT_ROLES: ServerRole[] = ["ssh", "sftp"];
+const withDefaults = (server: Partial<ServerProfile> & Pick<ServerProfile, "id" | "name" | "host" | "port" | "username" | "authMethod" | "color" | "group" | "favorite" | "notes" | "createdAt">): ServerProfile => ({
+  roles: DEFAULT_ROLES,
+  tags: [],
+  portKnockSequence: "",
+  forceKeyboardInteractive: false,
+  jumpHost: null,
+  terminalFontSize: 12,
+  ...server,
+});
 
 type ServerStoreValue = {
   servers: ServerProfile[];
@@ -46,7 +72,7 @@ export function ServerProvider({ children }: { children: React.ReactNode }) {
     Promise.all([AsyncStorage.getItem(SERVERS_KEY), AsyncStorage.getItem(ACTIVE_KEY)]).then(([storedServers, storedActive]) => {
       try {
         const decoded = storedServers ? JSON.parse(storedServers) : [];
-        if (Array.isArray(decoded)) setServers(decoded);
+        if (Array.isArray(decoded)) setServers(decoded.map((server: ServerProfile) => withDefaults(server)));
         if (storedActive) setActiveServerId(storedActive);
       } finally {
         setReady(true);
@@ -55,7 +81,7 @@ export function ServerProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const addServer = useCallback(async (input: Omit<ServerProfile, "id" | "createdAt">) => {
-    const server: ServerProfile = { ...input, id: `server-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`, createdAt: new Date().toISOString() };
+    const server: ServerProfile = withDefaults({ ...input, id: `server-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`, createdAt: new Date().toISOString() });
     setServers((current) => { const next = [server, ...current]; const nextActive = activeServerId ?? server.id; setActiveServerId(nextActive); void persist(next, nextActive); return next; });
     return server;
   }, [activeServerId]);
