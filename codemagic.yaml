@@ -1,42 +1,58 @@
 workflows:
-  expo-ios-ad-hoc:
-    name: Server IDE iOS Ad Hoc
-    max_build_duration: 60
+  ios-esign-ipa:
+    name: Server IDE — Esign IPA
+    max_build_duration: 120
     instance_type: mac_mini_m2
     environment:
-      xcode: 26.4.1
-      node: 22.13.0
-      ios_signing:
-        distribution_type: ad_hoc
-        bundle_identifier: app.carambola5307.spinach7929
+      node: 22
+      xcode: latest
     scripts:
-      - name: Validate Expo application source
-        script: |
-          test -f app.config.ts
-          test -f package.json
-          test -f pnpm-lock.yaml
-          test -f assets/images/icon.png
-          node -e "const p=require('./package.json'); if (!p.dependencies?.expo || !p.devDependencies?.['babel-preset-expo']) process.exit(1)"
       - name: Install JavaScript dependencies
         script: |
           corepack enable
           pnpm install --frozen-lockfile
-      - name: Generate native iOS project
-        script: npx expo prebuild --platform ios --non-interactive
-      - name: Apply provisioning profiles
-        script: xcode-project use-profiles
-      - name: Run TypeScript checks
-        script: pnpm check
-      - name: Run unit tests
-        script: pnpm test
-      - name: Build signed IPA
+      - name: Validate application source
         script: |
-          WORKSPACE=$(find ios -maxdepth 1 -name '*.xcworkspace' -print -quit)
-          test -n "$WORKSPACE"
-          SCHEME=$(basename "$WORKSPACE" .xcworkspace)
-          xcode-project build-ipa --workspace "$WORKSPACE" --scheme "$SCHEME"
+          pnpm check
+          pnpm lint
+          pnpm test
+      - name: Create the iOS JavaScript bundle
+        script: |
+          pnpm exec expo export --platform ios --output-dir build/ios-export --clear
+      - name: Generate native iOS project
+        script: |
+          pnpm exec expo prebuild --platform ios --no-install --clean
+          workspace="$(find ios -maxdepth 1 -name '*.xcworkspace' -print -quit)"
+          test -n "$workspace"
+          cd ios
+          pod install
+      - name: Build unsigned IPA for Esign
+        script: |
+          workspace="$(find ios -maxdepth 1 -name '*.xcworkspace' -print -quit)"
+          scheme="$(basename "$workspace" .xcworkspace)"
+          xcodebuild \
+            -workspace "$workspace" \
+            -scheme "$scheme" \
+            -configuration Release \
+            -sdk iphoneos \
+            -destination 'generic/platform=iOS' \
+            -archivePath "$CM_BUILD_DIR/build/ServerIDE.xcarchive" \
+            archive \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY=""
+          app_path="$(find "$CM_BUILD_DIR/build/ServerIDE.xcarchive/Products/Applications" -maxdepth 1 -name '*.app' -print -quit)"
+          test -n "$app_path"
+          mkdir -p "$CM_BUILD_DIR/build/Payload"
+          cp -R "$app_path" "$CM_BUILD_DIR/build/Payload/"
+          cd "$CM_BUILD_DIR/build"
+          zip -qry ServerIDE-Esign-unsigned.ipa Payload
+      - name: Create source ZIP
+        script: |
+          cd "$CM_BUILD_DIR"
+          zip -qry "$CM_BUILD_DIR/build/ServerIDE-source.zip" . \
+            -x '.git/*' 'node_modules/*' 'ios/*' 'android/*' 'build/*' '.expo/*'
     artifacts:
-      - build/ios/ipa/*.ipa
-      - build/ios/xcarchive/*.xcarchive
-      - ios/**/*.app
-      - /tmp/xcodebuild_logs/*.log
+      - build/*.ipa
+      - build/*.zip
+      - build/**/*.log
