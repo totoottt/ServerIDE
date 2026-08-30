@@ -2,18 +2,11 @@ import { COOKIE_NAME } from "../shared/const.js";
 import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
 import { publicProcedure, router } from "./_core/trpc";
-import { deleteRemotePath, listRemoteDirectory, makeRemoteDirectory, readRemoteFile, runSSHCommand, writeRemoteFile } from "./ssh-service";
+import { deleteRemotePath, listRemoteDirectory, makeRemoteDirectory, readRemoteChunk, readRemoteFile, runSSHCommand, statRemoteFile, writeRemoteChunk, writeRemoteFile } from "./ssh-service";
+import { sshCredentialsSchema } from "./ssh-validation";
 import { z } from "zod";
 
-export const sshCredentialsSchema = z.object({
-  host: z.string().min(1).max(255),
-  port: z.number().int().min(1).max(65535),
-  username: z.string().min(1).max(128),
-  password: z.string().max(4096).optional(),
-  privateKey: z.string().max(20000).optional(),
-  passphrase: z.string().max(4096).optional(),
-  hostFingerprint: z.string().regex(/^SHA256:[A-Za-z0-9+/]+$/).optional(),
-}).refine((value) => Boolean(value.password || value.privateKey), { message: "A password or private key is required" });
+export { sshCredentialsSchema };
 
 export const appRouter = router({
   system: systemRouter,
@@ -32,6 +25,9 @@ export const appRouter = router({
     write: publicProcedure.input(z.object({ credentials: sshCredentialsSchema, path: z.string().min(1).max(4096), content: z.string().max(2_000_000) })).mutation(async ({ input }) => writeRemoteFile(input.credentials, input.path, input.content)),
     delete: publicProcedure.input(z.object({ credentials: sshCredentialsSchema, path: z.string().min(1).max(4096) })).mutation(async ({ input }) => deleteRemotePath(input.credentials, input.path)),
     mkdir: publicProcedure.input(z.object({ credentials: sshCredentialsSchema, path: z.string().min(1).max(4096) })).mutation(async ({ input }) => makeRemoteDirectory(input.credentials, input.path)),
+    stat: publicProcedure.input(z.object({ credentials: sshCredentialsSchema, path: z.string().min(1).max(4096) })).mutation(async ({ input }) => statRemoteFile(input.credentials, input.path)),
+    writeChunk: publicProcedure.input(z.object({ credentials: sshCredentialsSchema, path: z.string().min(1).max(4096), offset: z.number().int().min(0), dataBase64: z.string().min(1).max(900_000) })).mutation(async ({ input }) => writeRemoteChunk(input.credentials, input.path, Buffer.from(input.dataBase64, "base64"), input.offset)),
+    readChunk: publicProcedure.input(z.object({ credentials: sshCredentialsSchema, path: z.string().min(1).max(4096), offset: z.number().int().min(0), length: z.number().int().min(1).max(524_288) })).mutation(async ({ input }) => ({ offset: input.offset, dataBase64: (await readRemoteChunk(input.credentials, input.path, input.offset, input.length)).toString("base64") })),
   }),
 });
 

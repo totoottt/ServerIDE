@@ -1,4 +1,4 @@
-import { Client } from "ssh2";
+import { Client, type ClientChannel } from "ssh2";
 import { createHash } from "node:crypto";
 
 export type SSHCredentials = {
@@ -11,7 +11,7 @@ export type SSHCredentials = {
   hostFingerprint?: string;
 };
 
-function connect(credentials: SSHCredentials): Promise<Client> {
+export function connect(credentials: SSHCredentials): Promise<Client> {
   return new Promise((resolve, reject) => {
     const client = new Client();
     const timer = setTimeout(() => { client.end(); reject(new Error("SSH connection timed out")); }, 12_000);
@@ -23,6 +23,16 @@ function connect(credentials: SSHCredentials): Promise<Client> {
       const fingerprint = `SHA256:${createHash("sha256").update(key).digest("base64").replace(/=+$/, "")}`;
       return fingerprint === hostFingerprint;
     } });
+  });
+}
+
+export async function openSSHPTY(credentials: SSHCredentials, cols = 100, rows = 30) {
+  const client = await connect(credentials);
+  return await new Promise<{ client: Client; stream: ClientChannel }>((resolve, reject) => {
+    client.shell({ term: "xterm-256color", cols, rows }, (error, stream) => {
+      if (error) { client.end(); return reject(error); }
+      resolve({ client, stream });
+    });
   });
 }
 
@@ -53,6 +63,54 @@ export async function listRemoteDirectory(credentials: SSHCredentials, path: str
           if (readError) return reject(readError);
           resolve(list.map((entry) => ({ name: entry.filename, type: entry.attrs.isDirectory() ? "directory" : "file", size: entry.attrs.size, modifiedAt: entry.attrs.mtime * 1000 })));
         });
+      });
+    });
+  } finally { client.end(); }
+}
+
+export async function writeRemoteChunk(credentials: SSHCredentials, path: string, content: Buffer, offset: number) {
+  const client = await connect(credentials);
+  try {
+    await new Promise<void>((resolve, reject) => {
+      client.sftp((error, sftp) => {
+        if (error) return reject(error);
+        sftp.open(path, offset === 0 ? "w" : "r+", 0o644, (openError, handle) => {
+          if (openError) return reject(openError);
+          sftp.write(handle, content, 0, content.length, offset, (writeError) => {
+            sftp.close(handle, () => writeError ? reject(writeError) : resolve());
+          });
+        });
+      });
+    });
+    return { offset: offset + content.length } as const;
+  } finally { client.end(); }
+}
+
+export async function readRemoteChunk(credentials: SSHCredentials, path: string, offset: number, length: number) {
+  const client = await connect(credentials);
+  try {
+    return await new Promise<Buffer>((resolve, reject) => {
+      client.sftp((error, sftp) => {
+        if (error) return reject(error);
+        sftp.open(path, "r", 0o644, (openError, handle) => {
+          if (openError) return reject(openError);
+          const buffer = Buffer.alloc(length);
+          sftp.read(handle, buffer, 0, length, offset, (readError, bytesRead) => {
+            sftp.close(handle, () => readError ? reject(readError) : resolve(buffer.subarray(0, bytesRead)));
+          });
+        });
+      });
+    });
+  } finally { client.end(); }
+}
+
+export async function statRemoteFile(credentials: SSHCredentials, path: string) {
+  const client = await connect(credentials);
+  try {
+    return await new Promise<{ size: number; modifiedAt: number }>((resolve, reject) => {
+      client.sftp((error, sftp) => {
+        if (error) return reject(error);
+        sftp.stat(path, (statError, stats) => statError ? reject(statError) : resolve({ size: stats.size, modifiedAt: stats.mtime * 1000 }));
       });
     });
   } finally { client.end(); }

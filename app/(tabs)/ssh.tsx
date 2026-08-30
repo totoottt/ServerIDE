@@ -1,10 +1,11 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 import { ScreenContainer } from "@/components/screen-container";
 import { IconSymbol } from "@/components/ui/icon-symbol";
 import { useColors } from "@/hooks/use-colors";
 import { useServerStore } from "@/lib/server-store";
-import { trpc } from "@/lib/trpc";
+import { readServerSecret } from "@/lib/server-secrets";
+import { getApiBaseUrl } from "@/constants/oauth";
 
 const stages = ["Network", "Auth", "Shell", "PTY", "Ready"];
 
@@ -18,7 +19,8 @@ export default function SSHScreen() {
   const [lines, setLines] = useState<string[]>(["# Select a server and enter credentials to begin."]);
   const [connected, setConnected] = useState(false);
   const [expandedAuth, setExpandedAuth] = useState(false);
-  const exec = trpc.ssh.exec.useMutation();
+  const socketRef = useRef<WebSocket | null>(null);
+  const pendingInput = useRef<string[]>([]);
 
   const credentials = useMemo(() => activeServer ? {
     host: activeServer.host,
@@ -27,6 +29,31 @@ export default function SSHScreen() {
     ...(activeServer.authMethod === "ssh-key" ? { privateKey } : { password }),
     ...(fingerprint ? { hostFingerprint: fingerprint } : {}),
   } : null, [activeServer, password, privateKey, fingerprint]);
+
+  useEffect(() => () => { socketRef.current?.close(); }, []);
+  useEffect(() => { let cancelled = false; if (!activeServer) return; void readServerSecret(activeServer.id).then((secret) => { if (!cancelled && secret) { setPassword(secret.password ?? ""); setPrivateKey(secret.privateKey ?? ""); setFingerprint(secret.hostFingerprint ?? ""); } }); return () => { cancelled = true; }; }, [activeServer]);
+
+  const connectLive = () => {
+    if (!credentials) return;
+    if (socketRef.current?.readyState === WebSocket.OPEN || socketRef.current?.readyState === WebSocket.CONNECTING) return;
+    const socket = new WebSocket(`${getApiBaseUrl().replace(/^http/, "ws")}/api/ssh/pty`);
+    socketRef.current = socket;
+    socket.onopen = () => {
+      socket.send(JSON.stringify({ type: "start", credentials, cols: 100, rows: 30 }));
+      pendingInput.current.splice(0).forEach((data) => socket.send(JSON.stringify({ type: "input", data })));
+    };
+    socket.onmessage = (event) => {
+      try {
+        const message = JSON.parse(event.data as string) as { type: string; data?: string; message?: string; code?: number | null };
+        if (message.type === "ready") { setConnected(true); setLines((current) => [...current, "[PTY] live session ready"]); }
+        if (message.type === "data") setLines((current) => [...current, ...(message.data ?? "").replace(/\\r/g, "").split("\\n").filter(Boolean)]);
+        if (message.type === "error") { setConnected(false); setLines((current) => [...current, `ERROR: ${message.message ?? "SSH session failed"}`]); }
+        if (message.type === "closed") { setConnected(false); setLines((current) => [...current, `[PTY] session closed (${message.code ?? "unknown"})`]); }
+      } catch { setLines((current) => [...current, "ERROR: Invalid PTY event"]); }
+    };
+    socket.onerror = () => { setConnected(false); setLines((current) => [...current, "ERROR: Live SSH channel unavailable"]); };
+    socket.onclose = () => { setConnected(false); };
+  };
 
   const run = async (value: string) => {
     if (!value.trim()) return;
@@ -41,10 +68,8 @@ export default function SSHScreen() {
       return;
     }
     try {
-      const result = await exec.mutateAsync({ credentials, command: value });
-      setConnected(true);
-      const output = [result.stdout.trim(), result.stderr.trim() ? `[stderr] ${result.stderr.trim()}` : "", result.code !== 0 && result.code !== null ? `Exit code: ${result.code}` : ""].filter(Boolean);
-      setLines((current) => [...current, ...(output.length ? output : ["Command completed successfully."])]);
+      if (socketRef.current?.readyState === WebSocket.OPEN) socketRef.current.send(JSON.stringify({ type: "input", data: `${value}\n` }));
+      else { pendingInput.current.push(`${value}\n`); connectLive(); }
     } catch (error) {
       setConnected(false);
       setLines((current) => [...current, `ERROR: ${error instanceof Error ? error.message : "SSH request failed"}`]);
