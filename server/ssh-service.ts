@@ -2,6 +2,7 @@ import { Client, type ClientChannel } from "ssh2";
 import { createHash } from "node:crypto";
 import * as net from "node:net";
 import * as dgram from "node:dgram";
+import type { Readable } from "node:stream";
 
 export type JumpHostConfig = {
   host: string;
@@ -117,7 +118,7 @@ function hostVerifierFor(hostFingerprint: string | undefined) {
 }
 
 /** Connects a single (non-jumped) SSH client, optionally answering keyboard-interactive prompts with `otpCode`. */
-function connectDirect(credentials: SSHCredentials & { sock?: NodeJS.ReadWriteStream }): Promise<Client> {
+function connectDirect(credentials: SSHCredentials & { sock?: Readable }): Promise<Client> {
   return new Promise((resolve, reject) => {
     const client = new Client();
     const timer = setTimeout(() => { client.end(); reject(new Error("SSH connection timed out")); }, 12_000);
@@ -166,7 +167,7 @@ export function connect(credentials: SSHCredentials): Promise<Client> {
         jumpClient.forwardOut("127.0.0.1", 0, credentials.host, credentials.port, async (error, stream) => {
           if (error) { jumpClient.end(); rejectOuter(error); return; }
           try {
-            const target = await connectDirect({ ...credentials, jumpHost: undefined, sock: stream } as any);
+            const target = await connectDirect({ ...credentials, jumpHost: undefined, sock: stream });
             target.once("close", () => jumpClient.end());
             resolveOuter(target);
           } catch (targetError) {
