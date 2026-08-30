@@ -3,6 +3,7 @@ import { Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 
 import { ScreenContainer } from "@/components/screen-container";
 import { IconSymbol } from "@/components/ui/icon-symbol";
 import { useColors } from "@/hooks/use-colors";
+import { useServerStore } from "@/lib/server-store";
 
 const metrics = [
   { label: "CPU Usage", value: "18.4%", detail: "4 cores · stable", color: "#4DA3FF", icon: "chevron.left.forwardslash.chevron.right" as const },
@@ -17,17 +18,18 @@ const activity = [
 ];
 
 export default function HomeScreen() {
-  const colors = useColors("dark");
-  const [online, setOnline] = useState(true);
-  const [toast, setToast] = useState("Ready for a server");
+  const colors = useColors();
+  const { activeServer, addServer } = useServerStore();
+  const [online, setOnline] = useState(false);
+  const [toast, setToast] = useState("Add a server to begin");
   const [showServerSheet, setShowServerSheet] = useState(false);
-  const [server, setServer] = useState({ name: "Demo server", host: "server.example.com", port: "22", username: "developer" });
+  const server = activeServer ? { name: activeServer.name, host: activeServer.host, port: String(activeServer.port), username: activeServer.username } : { name: "No server configured", host: "Add a server profile", port: "—", username: "—" };
   const [draft, setDraft] = useState(server);
-  const palette = useMemo(() => ({ success: "#35D07F", info: "#4DA3FF", warning: "#FFB547" }), []);
+  const palette = useMemo(() => ({ success: colors.success, info: colors.primary, warning: colors.warning }), [colors]);
 
   const action = (message: string) => {
     setToast(message);
-    setTimeout(() => setToast(server.name === "Demo server" ? "Ready for a server" : `${server.name} is ready`), 2200);
+    setTimeout(() => setToast(!activeServer ? "Add a server to begin" : `${server.name} is ready`), 2200);
   };
 
   return (
@@ -38,7 +40,7 @@ export default function HomeScreen() {
             <Text style={[styles.eyebrow, { color: colors.muted }]}>SERVER IDE / OVERVIEW</Text>
             <Text style={[styles.title, { color: colors.foreground }]}>Good morning.</Text>
           </View>
-          <Pressable onPress={() => setOnline(!online)} style={({ pressed }) => [styles.statusButton, { borderColor: online ? "#35D07F55" : "#FF5C7055", opacity: pressed ? 0.7 : 1 }]}>
+          <Pressable onPress={() => setOnline(Boolean(activeServer) && !online)} style={({ pressed }) => [styles.statusButton, { borderColor: online ? "#35D07F55" : "#FF5C7055", opacity: pressed ? 0.7 : 1 }]}>
             <View style={[styles.dot, { backgroundColor: online ? "#35D07F" : "#FF5C70" }]} />
             <Text style={[styles.statusText, { color: online ? "#35D07F" : "#FF5C70" }]}>{online ? "ONLINE" : "OFFLINE"}</Text>
           </Pressable>
@@ -76,7 +78,7 @@ export default function HomeScreen() {
               ))}
               <View style={styles.sheetActions}>
                 <Pressable onPress={() => setShowServerSheet(false)} style={({ pressed }) => [styles.sheetCancel, { borderColor: colors.border, opacity: pressed ? 0.7 : 1 }]}><Text style={{ color: colors.muted, fontWeight: "800" }}>Cancel</Text></Pressable>
-                <Pressable onPress={() => { setServer(draft); setOnline(false); setShowServerSheet(false); action(`${draft.name || "Server"} saved locally`); }} style={({ pressed }) => [styles.sheetSave, { backgroundColor: colors.primary, opacity: pressed ? 0.8 : 1 }]}><Text style={styles.sheetSaveText}>Save server</Text></Pressable>
+                <Pressable onPress={() => { void addServer({ name: draft.name || "My server", host: draft.host || "server.example.com", port: Number(draft.port) || 22, username: draft.username || "deploy", authMethod: "ssh-key", color: "blue", group: "Personal", favorite: false, notes: "" }); setOnline(false); setShowServerSheet(false); action(`${draft.name || "Server"} saved locally`); }} style={({ pressed }) => [styles.sheetSave, { backgroundColor: colors.primary, opacity: pressed ? 0.8 : 1 }]}><Text style={styles.sheetSaveText}>Save server</Text></Pressable>
               </View>
             </View>
           </View>
