@@ -11,6 +11,48 @@ export type SSHCredentials = {
   hostFingerprint?: string;
 };
 
+/**
+ * Discovers a host's SSH key fingerprint without pinning it, so the client can show
+ * the fingerprint to the user for a trust-on-first-use (TOFU) decision before it is
+ * saved and enforced by `connect()`. Without this, a server profile with no stored
+ * fingerprint can never complete a handshake, because the strict `hostVerifier`
+ * below always rejects when `hostFingerprint` is absent.
+ */
+export function discoverHostKey(
+  credentials: Omit<SSHCredentials, "hostFingerprint">
+): Promise<{ fingerprint: string }> {
+  return new Promise((resolve, reject) => {
+    const client = new Client();
+    let fingerprint: string | null = null;
+    const timer = setTimeout(() => {
+      client.end();
+      if (fingerprint) resolve({ fingerprint });
+      else reject(new Error("Timed out waiting for the host key"));
+    }, 10_000);
+
+    const finish = () => {
+      clearTimeout(timer);
+      client.end();
+      if (fingerprint) resolve({ fingerprint });
+      else reject(new Error("Host did not present a key during the handshake"));
+    };
+
+    // Auth success/failure is irrelevant here — we only need the host key, which is
+    // exchanged before authentication, so we resolve on 'ready' AND on 'error'.
+    client.once("ready", finish);
+    client.once("error", finish);
+    client.connect({
+      ...credentials,
+      tryKeyboard: false,
+      readyTimeout: 8_000,
+      hostVerifier: (key: Buffer) => {
+        fingerprint = `SHA256:${createHash("sha256").update(key).digest("base64").replace(/=+$/, "")}`;
+        return true; // accept provisionally just to capture the key; nothing is trusted yet
+      },
+    });
+  });
+}
+
 export function connect(credentials: SSHCredentials): Promise<Client> {
   return new Promise((resolve, reject) => {
     const client = new Client();
