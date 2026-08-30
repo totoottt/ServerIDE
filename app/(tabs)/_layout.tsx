@@ -14,6 +14,5 @@ export default function TabLayout() {
     <Tabs.Screen name="ssh" options={{ title: "SSH", tabBarIcon: ({ color }) => <IconSymbol name="chevron.left.forwardslash.chevron.right" size={21} color={color} /> }} />
     <Tabs.Screen name="files" options={{ title: "Files", tabBarIcon: ({ color }) => <IconSymbol name="paperplane.fill" size={21} color={color} /> }} />
     <Tabs.Screen name="checks" options={{ title: "Checks", tabBarIcon: ({ color }) => <IconSymbol name="paperplane.fill" size={21} color={color} /> }} />
-    <Tabs.Screen name="settings" options={{ title: "Settings", tabBarIcon: ({ color }) => <IconSymbol name="chevron.right" size={21} color={color} /> }} />
   </Tabs>;
 }
