@@ -1,0 +1,100 @@
+workflows:
+  ios-compile-check:
+    name: ServerIDE 0.7.1 Build 12 Compile Check
+    max_build_duration: 60
+    instance_type: mac_mini_m2
+    environment:
+      xcode: latest
+    scripts:
+      - name: Verify exact repository source
+        script: |
+          cd "$CM_BUILD_DIR"
+          python3 scripts/verify-source.py
+      - name: Test bundle verifier
+        script: |
+          cd "$CM_BUILD_DIR"
+          python3 -m unittest discover -s tests -p test_bundle_validation.py -v
+      - name: Install XcodeGen
+        script: |
+          if ! command -v xcodegen >/dev/null 2>&1; then
+            brew install xcodegen
+          fi
+      - name: Generate Xcode project
+        script: |
+          cd "$CM_BUILD_DIR"
+          xcodegen generate
+      - name: Resolve Swift packages
+        script: |
+          cd "$CM_BUILD_DIR"
+          xcodebuild -resolvePackageDependencies -project ServerIDE.xcodeproj -scheme ServerIDE
+      - name: Compile iOS device build without signing
+        script: |
+          cd "$CM_BUILD_DIR"
+          set -o pipefail
+          xcodebuild             -project ServerIDE.xcodeproj             -scheme ServerIDE             -configuration Debug             -destination 'generic/platform=iOS'             -derivedDataPath build/DerivedData             CODE_SIGNING_ALLOWED=NO             build | tee build_device.log
+      - name: Verify built app Files integration and icon
+        script: |
+          cd "$CM_BUILD_DIR"
+          python3 scripts/verify-bundle.py build/DerivedData/Build/Products/Debug-iphoneos/ServerIDE.app
+      - name: Run unit tests on available iPhone simulator
+        script: |
+          cd "$CM_BUILD_DIR"
+          bash scripts/test-ios.sh
+    artifacts:
+      - build/DerivedData/**/Build/Products/**/*.app
+      - test_results.xcresult
+      - test_simulator.log
+      - build_device.log
+      - /tmp/xcodebuild_logs/*.log
+
+  ios-signed-ipa:
+    name: ServerIDE 0.7.1 Build 12 Ad Hoc IPA
+    max_build_duration: 60
+    instance_type: mac_mini_m2
+    environment:
+      xcode: latest
+      ios_signing:
+        distribution_type: ad_hoc
+        bundle_identifier: app.carambola5307.spinach7929
+    scripts:
+      - name: Verify exact repository source
+        script: |
+          cd "$CM_BUILD_DIR"
+          python3 scripts/verify-source.py
+      - name: Test bundle verifier
+        script: |
+          cd "$CM_BUILD_DIR"
+          python3 -m unittest discover -s tests -p test_bundle_validation.py -v
+      - name: Install XcodeGen
+        script: |
+          if ! command -v xcodegen >/dev/null 2>&1; then
+            brew install xcodegen
+          fi
+      - name: Generate Xcode project
+        script: |
+          cd "$CM_BUILD_DIR"
+          xcodegen generate
+      - name: Resolve Swift packages
+        script: |
+          cd "$CM_BUILD_DIR"
+          xcodebuild -resolvePackageDependencies -project ServerIDE.xcodeproj -scheme ServerIDE
+      - name: Run unit tests on available iPhone simulator
+        script: |
+          cd "$CM_BUILD_DIR"
+          bash scripts/test-ios.sh
+      - name: Apply provisioning profiles
+        script: xcode-project use-profiles
+      - name: Build IPA
+        script: |
+          cd "$CM_BUILD_DIR"
+          xcode-project build-ipa             --project "$CM_BUILD_DIR/ServerIDE.xcodeproj"             --scheme "ServerIDE"
+      - name: Verify shipped IPA Files integration and icon
+        script: |
+          cd "$CM_BUILD_DIR"
+          python3 scripts/verify-bundle.py build/ios/ipa/*.ipa
+    artifacts:
+      - build/ios/ipa/*.ipa
+      - test_results.xcresult
+      - test_simulator.log
+      - /tmp/xcodebuild_logs/*.log
+      - $HOME/Library/Developer/Xcode/DerivedData/**/Build/**/*.app
