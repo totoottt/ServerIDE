@@ -21,6 +21,7 @@ export default function FilesScreen() {
   const [content, setContent] = useState("");
   const [password, setPassword] = useState("");
   const [privateKey, setPrivateKey] = useState("");
+  const [passphrase, setPassphrase] = useState("");
   const [fingerprint, setFingerprint] = useState("");
   const [showCredentials, setShowCredentials] = useState(false);
   const [transfer, setTransfer] = useState<TransferProgress | null>(null);
@@ -31,7 +32,7 @@ export default function FilesScreen() {
   const remove = trpc.ssh.delete.useMutation();
   const mkdir = trpc.ssh.mkdir.useMutation();
 
-  const credentials = useMemo(() => activeServer ? { host: activeServer.host, port: activeServer.port, username: activeServer.username, ...(activeServer.authMethod === "ssh-key" ? { privateKey } : { password }), ...(fingerprint ? { hostFingerprint: fingerprint } : {}) } : null, [activeServer, password, privateKey, fingerprint]);
+  const credentials = useMemo(() => activeServer ? { host: activeServer.host, port: activeServer.port, username: activeServer.username, ...(activeServer.authMethod === "ssh-key" ? { privateKey } : { password }), ...(passphrase ? { passphrase } : {}), ...(fingerprint ? { hostFingerprint: fingerprint } : {}) } : null, [activeServer, password, privateKey, passphrase, fingerprint]);
   const refresh = useCallback(async () => {
     if (!credentials) return setNotice("Select a server profile first");
     if (!password && !privateKey) return setNotice("Add credentials for this session");
@@ -39,6 +40,7 @@ export default function FilesScreen() {
   }, [credentials, list, path, password, privateKey]);
   const [entries, setEntries] = useState<Entry[]>([]);
   useEffect(() => { let cancelled = false; if (!activeServer) return; void readServerSecret(activeServer.id).then((secret) => { if (!cancelled && secret) { setPassword(secret.password ?? ""); setPrivateKey(secret.privateKey ?? ""); setFingerprint(secret.hostFingerprint ?? ""); } }); return () => { cancelled = true; }; }, [activeServer]);
+  useEffect(() => { let cancelled = false; if (!activeServer) return; void readServerSecret(activeServer.id).then((secret) => { if (!cancelled && secret) { setPassphrase(secret.passphrase ?? ""); } }); return () => { cancelled = true; }; }, [activeServer]);
   useEffect(() => { if (credentials && (password || privateKey)) void refresh(); }, [credentials, password, privateKey, refresh]);
   useEffect(() => { if (list.data) setEntries(list.data); }, [list.data]);
 

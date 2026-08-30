@@ -20,6 +20,7 @@ export default function SSHScreen() {
   const { activeServer } = useServerStore();
   const [password, setPassword] = useState("");
   const [privateKey, setPrivateKey] = useState("");
+  const [passphrase, setPassphrase] = useState("");
   const [fingerprint, setFingerprint] = useState("");
   const [command, setCommand] = useState("");
   const [lines, setLines] = useState<string[]>(["# Server IDE live terminal", "# Select a server and open a session."]);
@@ -35,8 +36,9 @@ export default function SSHScreen() {
     port: activeServer.port,
     username: activeServer.username,
     ...(activeServer.authMethod === "ssh-key" ? { privateKey } : { password }),
+    ...(passphrase ? { passphrase } : {}),
     ...(fingerprint ? { hostFingerprint: fingerprint } : {}),
-  } : null, [activeServer, password, privateKey, fingerprint]);
+  } : null, [activeServer, password, privateKey, passphrase, fingerprint]);
 
   useEffect(() => () => { socketRef.current?.close(); }, []);
   useEffect(() => {
@@ -46,6 +48,7 @@ export default function SSHScreen() {
       if (!cancelled && secret) {
         setPassword(secret.password ?? "");
         setPrivateKey(secret.privateKey ?? "");
+        setPassphrase(secret.passphrase ?? "");
         setFingerprint(secret.hostFingerprint ?? "");
       }
     });
@@ -56,7 +59,13 @@ export default function SSHScreen() {
     if (!credentials) return;
     if (socketRef.current?.readyState === WebSocket.OPEN || socketRef.current?.readyState === WebSocket.CONNECTING) return;
     setNotice("Opening encrypted live channel…");
-    const socket = new WebSocket(`${getApiBaseUrl().replace(/^http/, "ws")}/api/ssh/pty`);
+    const baseUrl = getApiBaseUrl();
+    if (!baseUrl) {
+      setNotice("ERROR: API base URL is empty on this device");
+      setLines((current) => [...current, "ERROR: API base URL is empty on this device"]);
+      return;
+    }
+    const socket = new WebSocket(`${baseUrl.replace(/^http/, "ws")}/api/ssh/pty`);
     socketRef.current = socket;
     socket.onopen = () => {
       socket.send(JSON.stringify({ type: "start", credentials, cols: 100, rows: 30 }));
@@ -73,7 +82,7 @@ export default function SSHScreen() {
         if (message.type === "data") setLines((current) => [...current, ...(message.data ?? "").replace(/\r/g, "").split("\n").filter(Boolean)]);
         if (message.type === "error") {
           setConnected(false);
-          setNotice("Connection failed — verify host fingerprint and credentials");
+          setNotice(`Connection failed: ${message.message ?? "SSH session failed"}`);
           setLines((current) => [...current, `ERROR: ${message.message ?? "SSH session failed"}`]);
         }
         if (message.type === "closed") {
@@ -85,7 +94,7 @@ export default function SSHScreen() {
     };
     socket.onerror = () => {
       setConnected(false);
-      setNotice("Live channel unavailable — tap a snippet or run a command to retry");
+      setNotice("Live channel unavailable — check API URL and network");
       setLines((current) => [...current, "ERROR: Live SSH channel unavailable"]);
     };
     socket.onclose = () => { setConnected(false); };

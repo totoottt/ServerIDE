@@ -46,6 +46,15 @@ export function getApiBaseUrl(): string {
     }
   }
 
+  // On native, derive from Expo hostUri when available (dev client / Expo Go)
+  const hostUri = Constants.expoConfig?.hostUri;
+  if (hostUri) {
+    const [host] = hostUri.split(":");
+    if (host) {
+      return `http://${host}:3000`;
+    }
+  }
+
   // Fallback to empty (will use relative URL)
   return "";
 }
