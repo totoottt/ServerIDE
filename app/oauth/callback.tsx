@@ -3,7 +3,7 @@ import * as Api from "@/lib/_core/api";
 import * as Auth from "@/lib/_core/auth";
 import * as Linking from "expo-linking";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { ActivityIndicator, Text } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -18,6 +18,13 @@ export default function OAuthCallback() {
   }>();
   const [status, setStatus] = useState<"processing" | "success" | "error">("processing");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  const openApp = useCallback(() => {
+    // The tabs index is the root URL. Navigating to the URL instead of the
+    // route-group name also works in production builds where group segments
+    // are intentionally absent from the public path.
+    router.replace("/");
+  }, [router]);
 
   useEffect(() => {
     const handleCallback = async () => {
@@ -61,9 +68,7 @@ export default function OAuthCallback() {
 
           setStatus("success");
           console.log("[OAuth] Web authentication successful, redirecting to home...");
-          setTimeout(() => {
-            router.replace("/(tabs)");
-          }, 1000);
+          openApp();
           return;
         }
 
@@ -158,9 +163,7 @@ export default function OAuthCallback() {
           // No need to fetch from API
           setStatus("success");
           console.log("[OAuth] Redirecting to home...");
-          setTimeout(() => {
-            router.replace("/(tabs)");
-          }, 1000);
+          openApp();
           return;
         }
 
@@ -212,11 +215,8 @@ export default function OAuthCallback() {
           setStatus("success");
           console.log("[OAuth] Authentication successful, redirecting to home...");
 
-          // Redirect to home after a short delay
-          setTimeout(() => {
-            console.log("[OAuth] Executing redirect...");
-            router.replace("/(tabs)");
-          }, 1000);
+          console.log("[OAuth] Executing redirect...");
+          openApp();
         } else {
           console.error("[OAuth] No session token in result:", result);
           setStatus("error");
@@ -232,7 +232,7 @@ export default function OAuthCallback() {
     };
 
     handleCallback();
-  }, [params.code, params.state, params.error, params.sessionToken, params.user, router]);
+  }, [params.code, params.state, params.error, params.sessionToken, params.user, openApp]);
 
   return (
     <SafeAreaView className="flex-1" edges={["top", "bottom", "left", "right"]}>

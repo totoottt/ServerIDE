@@ -2,9 +2,11 @@ import * as Linking from "expo-linking";
 import Constants from "expo-constants";
 import * as ReactNative from "react-native";
 
-// Read the scheme embedded by app.config.ts so OAuth always follows the native build.
+// Read the scheme that is actually embedded by app.config.ts. Keeping a
+// second hard-coded bundle ID here caused OAuth to return to a scheme that
+// iOS had never registered, leaving the user on the sign-in page.
 const configuredScheme = Constants.expoConfig?.scheme;
-const schemeFromBundleId =
+const nativeScheme =
   (Array.isArray(configuredScheme) ? configuredScheme[0] : configuredScheme) ||
   "manusserveridemobile";
 
@@ -15,7 +17,7 @@ const env = {
   ownerId: process.env.EXPO_PUBLIC_OWNER_OPEN_ID ?? "",
   ownerName: process.env.EXPO_PUBLIC_OWNER_NAME ?? "",
   apiBaseUrl: process.env.EXPO_PUBLIC_API_BASE_URL ?? "",
-  deepLinkScheme: schemeFromBundleId,
+  deepLinkScheme: nativeScheme,
 };
 
 export const OAUTH_PORTAL_URL = env.portal;
