@@ -18,9 +18,6 @@ const MAPPING = {
   "paperplane.fill": "send",
   "chevron.left.forwardslash.chevron.right": "code",
   "chevron.right": "chevron-right",
-  "folder.fill": "folder",
-  "checkmark.shield.fill": "verified-user",
-  "gearshape.fill": "settings",
 } as IconMapping;
 
 /**
