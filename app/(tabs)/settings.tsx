@@ -3,17 +3,18 @@ import { Pressable, ScrollView, StyleSheet, Switch, Text, View } from "react-nat
 import { ScreenContainer } from "@/components/screen-container";
 import { IconSymbol } from "@/components/ui/icon-symbol";
 import { useColors } from "@/hooks/use-colors";
+import { useThemeContext } from "@/lib/theme-provider";
+import type { ThemeVariant } from "@/constants/theme";
 
-const themes = [
-  { name: "Midnight", color: "#07090C" },
-  { name: "Ocean", color: "#08202B" },
-  { name: "Slate", color: "#171B22" },
+const themes: { id: ThemeVariant; name: string; color: string }[] = [
+  { id: "midnight", name: "Midnight", color: "#07090C" },
+  { id: "ocean", name: "Ocean", color: "#08202B" },
+  { id: "slate", name: "Slate", color: "#171B22" },
 ];
 
 export default function SettingsScreen() {
-  const colors = useColors("dark");
-  const [selectedTheme, setSelectedTheme] = useState("Midnight");
-  const [largeText, setLargeText] = useState(false);
+  const colors = useColors();
+  const { themeVariant, setThemeVariant, largeText, setLargeText } = useThemeContext();
   const [haptics, setHaptics] = useState(true);
   const [sync, setSync] = useState(false);
   const [toast, setToast] = useState("Guest mode · saved on this device");
@@ -35,14 +36,14 @@ export default function SettingsScreen() {
           <Text style={[styles.label, { color: colors.muted }]}>THEME</Text>
           <View style={styles.themeRow}>
             {themes.map((theme) => (
-              <Pressable key={theme.name} onPress={() => { setSelectedTheme(theme.name); notify(`${theme.name} theme selected`); }} style={({ pressed }) => [styles.themeOption, { borderColor: selectedTheme === theme.name ? colors.primary : colors.border, opacity: pressed ? 0.7 : 1 }]}>
-                <View style={[styles.themeSwatch, { backgroundColor: theme.color, borderColor: selectedTheme === theme.name ? colors.primary : colors.border }]}>{selectedTheme === theme.name && <View style={[styles.swatchDot, { backgroundColor: colors.success }]} />}</View>
+              <Pressable key={theme.id} onPress={() => { setThemeVariant(theme.id); notify(`${theme.name} theme selected across the app`); }} style={({ pressed }) => [styles.themeOption, { borderColor: themeVariant === theme.id ? colors.primary : colors.border, opacity: pressed ? 0.7 : 1 }]}>
+                <View style={[styles.themeSwatch, { backgroundColor: theme.color, borderColor: themeVariant === theme.id ? colors.primary : colors.border }]}>{themeVariant === theme.id && <View style={[styles.swatchDot, { backgroundColor: colors.success }]} />}</View>
                 <Text style={[styles.themeName, { color: colors.foreground }]}>{theme.name}</Text>
               </Pressable>
             ))}
           </View>
-          <View style={[styles.row, { borderTopColor: colors.border }]}><View style={styles.rowCopy}><Text style={[styles.rowTitle, { color: colors.foreground }]}>Larger text</Text><Text style={[styles.rowDetail, { color: colors.muted }]}>Increase editor and terminal readability</Text></View><Switch value={largeText} onValueChange={(value) => { setLargeText(value); notify(value ? "Larger text enabled" : "Larger text disabled"); }} trackColor={{ false: colors.border, true: colors.primary }} thumbColor="#F4F7FA" /></View>
-          <View style={[styles.row, { borderTopColor: colors.border }]}><View style={styles.rowCopy}><Text style={[styles.rowTitle, { color: colors.foreground }]}>Haptic feedback</Text><Text style={[styles.rowDetail, { color: colors.muted }]}>Press and action confirmation feedback</Text></View><Switch value={haptics} onValueChange={setHaptics} trackColor={{ false: colors.border, true: colors.success }} thumbColor="#F4F7FA" /></View>
+          <View style={[styles.row, { borderTopColor: colors.border }]}><View style={styles.rowCopy}><Text style={[styles.rowTitle, { color: colors.foreground }]}>Larger text</Text><Text style={[styles.rowDetail, { color: colors.muted }]}>Increase editor and terminal readability</Text></View><Switch value={largeText} onValueChange={(value) => { setLargeText(value); notify(value ? "Larger text enabled across the app" : "Larger text disabled"); }} trackColor={{ false: colors.border, true: colors.primary }} thumbColor={colors.foreground} /></View>
+          <View style={[styles.row, { borderTopColor: colors.border }]}><View style={styles.rowCopy}><Text style={[styles.rowTitle, { color: colors.foreground }]}>Haptic feedback</Text><Text style={[styles.rowDetail, { color: colors.muted }]}>Press and action confirmation feedback</Text></View><Switch value={haptics} onValueChange={setHaptics} trackColor={{ false: colors.border, true: colors.success }} thumbColor={colors.foreground} /></View>
         </View>
 
         <Text style={[styles.section, { color: colors.foreground }]}>Workspace layout</Text>
@@ -53,7 +54,7 @@ export default function SettingsScreen() {
         <Text style={[styles.section, { color: colors.foreground }]}>Sync & account</Text>
         <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
           <View style={styles.accountRow}><View style={[styles.accountIcon, { backgroundColor: `${colors.primary}18` }]}><IconSymbol name="paperplane.fill" size={18} color={colors.primary} /></View><View style={styles.rowCopy}><Text style={[styles.rowTitle, { color: colors.foreground }]}>Guest workspace</Text><Text style={[styles.rowDetail, { color: colors.muted }]}>Settings stay on this device</Text></View></View>
-          <View style={[styles.row, { borderTopColor: colors.border }]}><View style={styles.rowCopy}><Text style={[styles.rowTitle, { color: colors.foreground }]}>Sync across devices</Text><Text style={[styles.rowDetail, { color: colors.muted }]}>Sign in only when you want sync</Text></View><Switch value={sync} onValueChange={(value) => { setSync(value); notify(value ? "Sign in to sync selected" : "Guest mode selected"); }} trackColor={{ false: colors.border, true: colors.primary }} thumbColor="#F4F7FA" /></View>
+          <View style={[styles.row, { borderTopColor: colors.border }]}><View style={styles.rowCopy}><Text style={[styles.rowTitle, { color: colors.foreground }]}>Sync across devices</Text><Text style={[styles.rowDetail, { color: colors.muted }]}>Sign in only when you want sync</Text></View><Switch value={sync} onValueChange={(value) => { setSync(value); notify(value ? "Sign in to sync selected" : "Guest mode selected"); }} trackColor={{ false: colors.border, true: colors.primary }} thumbColor={colors.foreground} /></View>
         </View>
         <Text style={[styles.toast, { color: colors.muted }]}>{toast}</Text>
       </ScrollView>
