@@ -73,3 +73,9 @@ The supplied project.yml includes the Python helper as an app resource. Keep tha
 - Apple opening documents in place: https://developer.apple.com/documentation/bundleresources/information-property-list/lssupportsopeningdocumentsinplace
 - Apple Button: https://developer.apple.com/documentation/swiftui/button
 - Apple Menu: https://developer.apple.com/documentation/swiftui/menu
+
+## Codemagic artifacts — IPA, editable APP and source ZIP
+
+The signed workflow now publishes three user-facing outputs after a successful Ad Hoc build: `ServerIDE.ipa` for direct IPA download and installation, `ServerIDE.app.zip` containing the extracted `Payload/ServerIDE.app` bundle for inspection or re-signing workflows such as eSign, and `ServerIDE-source-and-changes.zip` containing the complete repository source and project configuration while excluding generated build output.
+
+The original `build/ios/ipa/*.ipa` artifact and logs remain available as well. The `.app` archive is created only after the IPA passes the existing bundle verification step.

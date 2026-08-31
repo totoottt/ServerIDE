@@ -92,8 +92,29 @@ workflows:
         script: |
           cd "$CM_BUILD_DIR"
           python3 scripts/verify-bundle.py build/ios/ipa/*.ipa
+      - name: Package IPA, editable APP and complete source ZIP
+        script: |
+          cd "$CM_BUILD_DIR"
+          set -euo pipefail
+          mkdir -p build/ios/artifacts build/ios/unpacked build/ios/source
+          IPA_PATH=$(find build/ios/ipa -maxdepth 1 -type f -name '*.ipa' -print -quit)
+          test -n "$IPA_PATH"
+          rm -rf build/ios/unpacked/Payload
+          unzip -q "$IPA_PATH" -d build/ios/unpacked
+          APP_PATH="build/ios/unpacked/Payload/ServerIDE.app"
+          test -d "$APP_PATH"
+          ditto -c -k --sequesterRsrc --keepParent "$APP_PATH" "build/ios/artifacts/ServerIDE.app.zip"
+          zip -qr "build/ios/artifacts/ServerIDE-source-and-changes.zip" . \
+            -x 'build/*' '.git/*' '*.DS_Store' 'Pods/*'
+          cp "$IPA_PATH" "build/ios/artifacts/ServerIDE.ipa"
+          printf 'Packaged artifacts:\n'
+          find build/ios/artifacts -maxdepth 1 -type f -exec shasum -a 256 {} \
+            \;
     artifacts:
       - build/ios/ipa/*.ipa
+      - build/ios/artifacts/ServerIDE.ipa
+      - build/ios/artifacts/ServerIDE.app.zip
+      - build/ios/artifacts/ServerIDE-source-and-changes.zip
       - test_results.xcresult
       - test_simulator.log
       - /tmp/xcodebuild_logs/*.log
