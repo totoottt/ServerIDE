@@ -1,100 +1,43 @@
 workflows:
-  ios-compile-check:
-    name: ServerIDE 0.7.3 Build 14 Compile Check
+  expo-ios-ad-hoc:
+    name: Server IDE iOS Ad Hoc
     max_build_duration: 60
     instance_type: mac_mini_m2
     environment:
-      xcode: latest
-    scripts:
-      - name: Verify exact repository source
-        script: |
-          cd "$CM_BUILD_DIR"
-          python3 scripts/verify-source.py
-      - name: Test bundle verifier
-        script: |
-          cd "$CM_BUILD_DIR"
-          python3 -m unittest discover -s tests -v
-      - name: Install XcodeGen
-        script: |
-          if ! command -v xcodegen >/dev/null 2>&1; then
-            brew install xcodegen
-          fi
-      - name: Generate Xcode project
-        script: |
-          cd "$CM_BUILD_DIR"
-          xcodegen generate
-      - name: Resolve Swift packages
-        script: |
-          cd "$CM_BUILD_DIR"
-          xcodebuild -resolvePackageDependencies -project ServerIDE.xcodeproj -scheme ServerIDE
-      - name: Compile iOS device build without signing
-        script: |
-          cd "$CM_BUILD_DIR"
-          set -o pipefail
-          xcodebuild             -project ServerIDE.xcodeproj             -scheme ServerIDE             -configuration Debug             -destination 'generic/platform=iOS'             -derivedDataPath build/DerivedData             CODE_SIGNING_ALLOWED=NO             build | tee build_device.log
-      - name: Verify built app Files integration and icon
-        script: |
-          cd "$CM_BUILD_DIR"
-          python3 scripts/verify-bundle.py build/DerivedData/Build/Products/Debug-iphoneos/ServerIDE.app
-      - name: Run unit tests on available iPhone simulator
-        script: |
-          cd "$CM_BUILD_DIR"
-          bash scripts/test-ios.sh
-    artifacts:
-      - build/DerivedData/**/Build/Products/**/*.app
-      - test_results.xcresult
-      - test_simulator.log
-      - build_device.log
-      - /tmp/xcodebuild_logs/*.log
-
-  ios-signed-ipa:
-    name: ServerIDE 0.7.3 Build 14 Ad Hoc IPA
-    max_build_duration: 60
-    instance_type: mac_mini_m2
-    environment:
-      xcode: latest
+      xcode: 26.4.1
+      node: 22.13.0
       ios_signing:
         distribution_type: ad_hoc
         bundle_identifier: app.carambola5307.spinach7929
     scripts:
-      - name: Verify exact repository source
+      - name: Validate Expo application source
         script: |
-          cd "$CM_BUILD_DIR"
-          python3 scripts/verify-source.py
-      - name: Test bundle verifier
+          test -f app.config.ts
+          test -f package.json
+          test -f pnpm-lock.yaml
+          test -f assets/images/icon.png
+          node -e "const p=require('./package.json'); if (!p.dependencies?.expo || !p.devDependencies?.['babel-preset-expo'] || !p.devDependencies?.['@babel/plugin-transform-react-jsx']) process.exit(1)"
+      - name: Install JavaScript dependencies
         script: |
-          cd "$CM_BUILD_DIR"
-          python3 -m unittest discover -s tests -v
-      - name: Install XcodeGen
-        script: |
-          if ! command -v xcodegen >/dev/null 2>&1; then
-            brew install xcodegen
-          fi
-      - name: Generate Xcode project
-        script: |
-          cd "$CM_BUILD_DIR"
-          xcodegen generate
-      - name: Resolve Swift packages
-        script: |
-          cd "$CM_BUILD_DIR"
-          xcodebuild -resolvePackageDependencies -project ServerIDE.xcodeproj -scheme ServerIDE
-      - name: Run unit tests on available iPhone simulator
-        script: |
-          cd "$CM_BUILD_DIR"
-          bash scripts/test-ios.sh
+          npm install --global --force pnpm@9.12.0
+          pnpm --version
+          pnpm install --frozen-lockfile
+      - name: Generate native iOS project
+        script: npx expo prebuild --platform ios --non-interactive
       - name: Apply provisioning profiles
         script: xcode-project use-profiles
-      - name: Build IPA
+      - name: Run TypeScript checks
+        script: pnpm check
+      - name: Run unit tests
+        script: pnpm test
+      - name: Build signed IPA
         script: |
-          cd "$CM_BUILD_DIR"
-          xcode-project build-ipa             --project "$CM_BUILD_DIR/ServerIDE.xcodeproj"             --scheme "ServerIDE"
-      - name: Verify shipped IPA Files integration and icon
-        script: |
-          cd "$CM_BUILD_DIR"
-          python3 scripts/verify-bundle.py build/ios/ipa/*.ipa
+          WORKSPACE=$(find ios -maxdepth 1 -name '*.xcworkspace' -print -quit)
+          test -n "$WORKSPACE"
+          SCHEME=$(basename "$WORKSPACE" .xcworkspace)
+          xcode-project build-ipa --workspace "$WORKSPACE" --scheme "$SCHEME"
     artifacts:
       - build/ios/ipa/*.ipa
-      - test_results.xcresult
-      - test_simulator.log
+      - build/ios/xcarchive/*.xcarchive
+      - ios/**/*.app
       - /tmp/xcodebuild_logs/*.log
-      - $HOME/Library/Developer/Xcode/DerivedData/**/Build/**/*.app
