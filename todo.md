@@ -292,14 +292,6 @@
 - [x] كتابة اتجاه بصري أصلي ومبتكر خاص بـServer IDE قبل تعديل الشاشات
 - [x] تطبيق Command Shelf الأولي في SSH والتحقق من الهوية والتفاعل في المعاينة
 
-## دمج الحزمة العاملة — أولوية إصلاح SSH
-
-- [x] فحص ServerIDE.zip وServerIDE_38_artifacts.zip واستخراج منطق SSH/SFTP والأدوات الناجح — Citadel وSSHConnectionManager وRemoteFileBridge وDownloadManager
-- [x] مقارنة Citadel/SSHConnectionManager/RemoteFileBridge/DownloadManager مع طبقة Expo الحالية — الحزمة العاملة Native Swift، والنسخة الحالية Expo تستخدم ssh2 عبر API/WebSocket
-- [x] نقل السلوك العامل فقط إلى التصميم الجديد دون نقل أي واجهة أو ألوان أو تخطيط — تم الاحتفاظ بـOperational Canvas وCommand Shelf
-- [x] إصلاح الوصول الفعلي إلى SSH والتحقق من كلمة المرور والمفتاح وpassphrase وبصمة المضيف — API base URL وWebSocket وhost verifier وpassphrase
-- [ ] اختبار أدوات الملفات والنقل والاستئناف على مسار SSH حقيقي ببيانات المستخدم — اختبار API/WebSocket متاح، وخادم SSH خارجي مطلوب
-
 ## وظائف ملف جميع الطلبات — بهوية Server IDE أصلية
 
 - [x] **أولوية قصوى:** تشخيص وإصلاح عدم الوصول إلى SSH فعليًا (فحص WebSocket، بيانات الاعتماد، بصمة المضيف، ورسائل الخطأ) — تم إصلاح اشتقاق عنوان API على الجهاز الحقيقي وإضافة passphrase وتشخيص مرحلي واضح

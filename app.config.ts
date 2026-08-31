@@ -41,11 +41,6 @@ const env = {
 
 const config: ExpoConfig = {
   name: env.appName,
-  extra: {
-    // Native builds need an absolute public API host; override this at build time when deploying the backend.
-    // Working WebDev gateway for the current test build. Set API_BASE_URL in Codemagic for production.
-    apiBaseUrl: process.env.EXPO_PUBLIC_API_BASE_URL || process.env.API_BASE_URL || "https://3000-ilh39gqqvs71q6mjio22p-8f76ccde.sg1.manus.computer",
-  },
   slug: env.appSlug,
   version: "1.0.0",
   orientation: "portrait",

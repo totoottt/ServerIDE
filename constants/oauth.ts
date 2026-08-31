@@ -46,12 +46,6 @@ export function getApiBaseUrl(): string {
     }
   }
 
-  // Standalone builds receive the backend host through app.config.ts extra.
-  const configuredApiBaseUrl = Constants.expoConfig?.extra?.apiBaseUrl;
-  if (typeof configuredApiBaseUrl === "string" && configuredApiBaseUrl.length > 0) {
-    return configuredApiBaseUrl.replace(/\/$/, "");
-  }
-
   // On native, derive from Expo hostUri when available (dev client / Expo Go)
   const hostUri = Constants.expoConfig?.hostUri;
   if (hostUri) {

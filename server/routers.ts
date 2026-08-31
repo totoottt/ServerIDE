@@ -2,8 +2,8 @@ import { COOKIE_NAME } from "../shared/const.js";
 import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
 import { publicProcedure, router } from "./_core/trpc";
-import { deleteRemotePath, listRemoteDirectory, makeRemoteDirectory, readRemoteChunk, readRemoteFile, runSSHCommand, statRemoteFile, writeRemoteChunk, writeRemoteFile } from "./ssh-service";
-import { sshCredentialsSchema } from "./ssh-validation";
+import { deleteRemotePath, discoverHostKey, listRemoteDirectory, makeRemoteDirectory, readRemoteChunk, readRemoteFile, runSSHCommand, statRemoteFile, writeRemoteChunk, writeRemoteFile } from "./ssh-service";
+import { sshCredentialsSchema, sshHostProbeSchema } from "./ssh-validation";
 import { z } from "zod";
 
 export { sshCredentialsSchema };
@@ -19,6 +19,7 @@ export const appRouter = router({
     }),
   }),
   ssh: router({
+    hostKey: publicProcedure.input(z.object({ credentials: sshHostProbeSchema })).mutation(async ({ input }) => discoverHostKey(input.credentials)),
     exec: publicProcedure.input(z.object({ credentials: sshCredentialsSchema, command: z.string().min(1).max(10000) })).mutation(async ({ input }) => runSSHCommand(input.credentials, input.command)),
     list: publicProcedure.input(z.object({ credentials: sshCredentialsSchema, path: z.string().min(1).max(4096) })).mutation(async ({ input }) => listRemoteDirectory(input.credentials, input.path)),
     read: publicProcedure.input(z.object({ credentials: sshCredentialsSchema, path: z.string().min(1).max(4096) })).mutation(async ({ input }) => readRemoteFile(input.credentials, input.path)),
