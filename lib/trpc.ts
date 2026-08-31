@@ -20,13 +20,14 @@ export const trpc = createTRPCReact<AppRouter>();
  */
 export function createTRPCClient() {
   const apiBaseUrl = getApiBaseUrl();
-  if (!apiBaseUrl) {
-    throw new Error("The connection service is not configured on this device.");
-  }
+  // Keep the client constructible even before runtime configuration is loaded.
+  // The fallback is absolute (never a relative /api URL), and UI actions surface
+  // a friendly connection-service message when the endpoint is unavailable.
+  const endpoint = apiBaseUrl || "http://127.0.0.1:3000";
   return trpc.createClient({
     links: [
       httpLink({
-        url: `${apiBaseUrl}/api/trpc`,
+        url: `${endpoint}/api/trpc`,
         // tRPC v11: transformer MUST be inside httpBatchLink, not at root
         transformer: superjson,
         async headers() {

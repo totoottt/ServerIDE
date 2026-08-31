@@ -1,4 +1,45 @@
 workflows:
+  expo-ios-app-store:
+    name: Server IDE iOS App Store
+    max_build_duration: 60
+    instance_type: mac_mini_m2
+    environment:
+      xcode: 26.4.1
+      node: 22.13.0
+      ios_signing:
+        distribution_type: app_store
+        bundle_identifier: app.carambola5307.spinach7929
+    scripts:
+      - name: Validate Expo application source
+        script: |
+          test -f app.config.ts
+          test -f package.json
+          test -f pnpm-lock.yaml
+          test -f assets/images/icon.png
+      - name: Install JavaScript dependencies
+        script: |
+          npm install --global --force pnpm@9.12.0
+          pnpm install --frozen-lockfile
+      - name: Generate native iOS project
+        script: npx expo prebuild --platform ios --non-interactive
+      - name: Apply App Store provisioning profile
+        script: xcode-project use-profiles
+      - name: Run quality checks
+        script: |
+          pnpm check
+          pnpm lint
+          pnpm test
+      - name: Build signed App Store IPA
+        script: |
+          WORKSPACE=$(find ios -maxdepth 1 -name '*.xcworkspace' -print -quit)
+          test -n "$WORKSPACE"
+          SCHEME=$(basename "$WORKSPACE" .xcworkspace)
+          xcode-project build-ipa --workspace "$WORKSPACE" --scheme "$SCHEME"
+    artifacts:
+      - build/ios/ipa/*.ipa
+      - build/ios/xcarchive/*.xcarchive
+      - /tmp/xcodebuild_logs/*.log
+
   expo-ios-ad-hoc:
     name: Server IDE iOS Ad Hoc
     max_build_duration: 60

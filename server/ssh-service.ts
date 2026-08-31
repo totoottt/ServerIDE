@@ -109,6 +109,16 @@ export async function discoverHostKey(
   });
 }
 
+function explainSSHError(error: unknown) {
+  const code = typeof error === "object" && error !== null && "code" in error ? String((error as { code?: unknown }).code) : "";
+  const message = error instanceof Error ? error.message.toLowerCase() : String(error).toLowerCase();
+  if (code === "ENOTFOUND" || message.includes("getaddrinfo")) return new Error("Invalid host or IP address.");
+  if (code === "ECONNREFUSED") return new Error("The SSH port is closed or refused the connection.");
+  if (code === "ETIMEDOUT" || message.includes("timed out") || message.includes("timeout")) return new Error("The host is unreachable or the connection timed out.");
+  if (message.includes("authentication") || message.includes("password") || message.includes("all configured authentication methods failed")) return new Error("Authentication failed: check the username and password.");
+  return error instanceof Error ? error : new Error("SSH connection failed.");
+}
+
 function hostVerifierFor(hostFingerprint: string | undefined) {
   return (key: Buffer) => {
     // Password-first UX: accepting a connection must not depend on a client-side
@@ -124,9 +134,9 @@ function hostVerifierFor(hostFingerprint: string | undefined) {
 function connectDirect(credentials: SSHCredentials & { sock?: Readable }): Promise<Client> {
   return new Promise((resolve, reject) => {
     const client = new Client();
-    const timer = setTimeout(() => { client.end(); reject(new Error("SSH connection timed out")); }, 12_000);
+    const timer = setTimeout(() => { client.end(); reject(new Error("The host is unreachable or the connection timed out.")); }, 12_000);
     client.once("ready", () => { clearTimeout(timer); resolve(client); });
-    client.once("error", (error) => { clearTimeout(timer); reject(error); });
+    client.once("error", (error) => { clearTimeout(timer); reject(explainSSHError(error)); });
     if (credentials.forceKeyboardInteractive) {
       client.on("keyboard-interactive", (_name, _instructions, _lang, prompts, finish) => {
         finish(prompts.map(() => credentials.otpCode ?? ""));
