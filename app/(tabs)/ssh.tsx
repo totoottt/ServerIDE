@@ -30,7 +30,6 @@ export default function SSHScreen() {
   const connected = connectionState === "connected";
   const [expandedAuth, setExpandedAuth] = useState(false);
   const [notice, setNotice] = useState("Command Shelf is ready");
-  const [miniMode, setMiniMode] = useState(false);
   const socketRef = useRef<WebSocket | null>(null);
   const pendingInput = useRef<string[]>([]);
   const commandInputRef = useRef<TextInput>(null);
@@ -150,13 +149,11 @@ export default function SSHScreen() {
   const statusColor = connectionState === "connected" ? colors.success : connectionState === "authenticating" ? colors.warning : colors.error;
   const statusLabel = connectionState === "connected" ? "CONNECTED" : connectionState === "authenticating" ? "AUTHENTICATING" : "OFFLINE";
 
-  if (miniMode) return <ScreenContainer edges={["top", "bottom", "left", "right"]} className="px-5" containerClassName="bg-background"><View style={styles.miniStage}><Pressable onPress={() => setMiniMode(false)} style={[styles.miniCard, { backgroundColor: colors.surface, borderColor: colors.primary }]}><View style={[styles.dot, { backgroundColor: statusColor }]} /><View style={styles.flex}><Text style={[styles.sessionName, { color: colors.foreground }]}>{activeServer?.name ?? "SSH session"}</Text><Text style={[styles.sub, { color: colors.muted }]}>{statusLabel} · {notice}</Text></View><Text style={{ color: colors.primary, fontWeight: "900" }}>OPEN</Text></Pressable><Pressable onPress={() => { socketRef.current?.close(); setMiniMode(false); setNotice("Session closed"); }} style={[styles.miniClose, { backgroundColor: `${colors.error}18` }]}><Text style={{ color: colors.error, fontWeight: "900" }}>×</Text></Pressable></View></ScreenContainer>;
-
   return <ScreenContainer className="px-5" containerClassName="bg-background">
     <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
       <View style={styles.header}>
         <View><Text style={[styles.kicker, { color: colors.muted }]}>OPERATIONAL CANVAS</Text><Text style={[styles.title, { color: colors.foreground }]}>Live terminal</Text></View>
-        <View style={styles.headerRight}><Pressable onPress={() => setMiniMode(true)} style={[styles.pipButton, { borderColor: colors.border }]}><Text style={{ color: colors.primary, fontSize: 10, fontWeight: "900" }}>PIP</Text></Pressable><View style={[styles.connection, { backgroundColor: `${statusColor}18` }]}><View style={[styles.dot, { backgroundColor: statusColor }]} /><Text style={{ color: statusColor, fontSize: 11, fontWeight: "800" }}>{statusLabel}</Text></View></View>
+        <View style={[styles.connection, { backgroundColor: `${statusColor}18` }]}><View style={[styles.dot, { backgroundColor: statusColor }]} /><Text style={{ color: statusColor, fontSize: 11, fontWeight: "800" }}>{statusLabel}</Text></View>
       </View>
 
       <View style={[styles.sessionRibbon, { backgroundColor: colors.surface, borderColor: colors.border }]}>
@@ -188,7 +185,7 @@ export default function SSHScreen() {
 
 const styles = StyleSheet.create({
   content: { paddingTop: 12, paddingBottom: 32, gap: 12 },
-  header: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }, headerRight: { flexDirection: "row", alignItems: "center", gap: 8 }, pipButton: { borderWidth: 1, borderRadius: 10, paddingHorizontal: 9, paddingVertical: 8 }, miniStage: { flex: 1, justifyContent: "center", alignItems: "center" }, miniCard: { width: "100%", minHeight: 76, borderRadius: 18, borderWidth: 1, padding: 15, flexDirection: "row", alignItems: "center", gap: 10 }, miniClose: { width: 42, height: 42, borderRadius: 14, alignItems: "center", justifyContent: "center", marginTop: 12 },
+  header: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 6 },
   kicker: { fontSize: 10, fontWeight: "900", letterSpacing: 1.4 }, title: { fontSize: 30, fontWeight: "900", marginTop: 6 },
   connection: { borderRadius: 18, paddingHorizontal: 11, paddingVertical: 8, flexDirection: "row", gap: 7, alignItems: "center" }, dot: { width: 7, height: 7, borderRadius: 4 },
   sessionRibbon: { borderRadius: 18, borderWidth: 1, padding: 13, flexDirection: "row", alignItems: "center", gap: 10 }, sessionIcon: { width: 38, height: 38, borderRadius: 12, alignItems: "center", justifyContent: "center" }, flex: { flex: 1 }, sessionName: { fontSize: 14, fontWeight: "900" }, sub: { fontSize: 10, marginTop: 4, lineHeight: 14 }, credentialButton: { height: 32, paddingHorizontal: 10, justifyContent: "center", borderWidth: 1, borderRadius: 10 },
